@@ -1,0 +1,14 @@
+{
+  "id": 167,
+  "slug": "two-sum-ii-input-array-is-sorted",
+  "title": "Two Sum II - Input Array Is Sorted",
+  "difficulty": "medium",
+  "category": "two-pointers",
+  "tags": [
+    "array",
+    "two-pointers",
+    "binary-search"
+  ],
+  "leetcodeUrl": "https://leetcode.com/problems/two-sum-ii-input-array-is-sorted/",
+  "inputSchema": "two-sum"
+}

@@ -1,0 +1,13 @@
+{
+  "id": 20,
+  "slug": "valid-parentheses",
+  "title": "Valid Parentheses",
+  "difficulty": "easy",
+  "category": "stack",
+  "tags": [
+    "string",
+    "stack"
+  ],
+  "leetcodeUrl": "https://leetcode.com/problems/valid-parentheses/",
+  "inputSchema": "stack-ops"
+}

@@ -1,0 +1,14 @@
+{
+  "id": 9004,
+  "slug": "bfs",
+  "title": "Breadth-First Search",
+  "difficulty": "medium",
+  "category": "graph",
+  "tags": [
+    "graph",
+    "bfs",
+    "queue"
+  ],
+  "leetcodeUrl": "https://en.wikipedia.org/wiki/Breadth-first_search",
+  "inputSchema": "graph"
+}

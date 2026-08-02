@@ -1,0 +1,60 @@
+[
+  {
+    "id": "bfs-1",
+    "label": "Small graph",
+    "input": {
+      "start": "A",
+      "graph": {
+        "nodes": [
+          {
+            "id": "A",
+            "label": "A",
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": "B",
+            "label": "B",
+            "x": 1,
+            "y": 0
+          },
+          {
+            "id": "C",
+            "label": "C",
+            "x": 0.5,
+            "y": 1
+          },
+          {
+            "id": "D",
+            "label": "D",
+            "x": 1.5,
+            "y": 1
+          }
+        ],
+        "edges": [
+          {
+            "id": "A-B",
+            "from": "A",
+            "to": "B"
+          },
+          {
+            "id": "A-C",
+            "from": "A",
+            "to": "C"
+          },
+          {
+            "id": "B-D",
+            "from": "B",
+            "to": "D"
+          },
+          {
+            "id": "C-D",
+            "from": "C",
+            "to": "D"
+          }
+        ]
+      }
+    },
+    "createdAt": 0
+  }
+]

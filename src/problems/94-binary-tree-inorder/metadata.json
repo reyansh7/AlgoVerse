@@ -1,0 +1,14 @@
+{
+  "id": 94,
+  "slug": "binary-tree-inorder-traversal",
+  "title": "Binary Tree Inorder Traversal",
+  "difficulty": "easy",
+  "category": "tree",
+  "tags": [
+    "tree",
+    "dfs",
+    "binary-tree"
+  ],
+  "leetcodeUrl": "https://leetcode.com/problems/binary-tree-inorder-traversal/",
+  "inputSchema": "tree-array"
+}

@@ -1,0 +1,14 @@
+{
+  "id": 9005,
+  "slug": "dfs",
+  "title": "Depth-First Search",
+  "difficulty": "medium",
+  "category": "graph",
+  "tags": [
+    "graph",
+    "dfs",
+    "stack"
+  ],
+  "leetcodeUrl": "https://en.wikipedia.org/wiki/Depth-first_search",
+  "inputSchema": "graph"
+}

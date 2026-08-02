@@ -1,0 +1,14 @@
+{
+  "id": 9003,
+  "slug": "quick-sort",
+  "title": "Quick Sort",
+  "difficulty": "medium",
+  "category": "sort",
+  "tags": [
+    "array",
+    "divide-and-conquer",
+    "sorting"
+  ],
+  "leetcodeUrl": "https://en.wikipedia.org/wiki/Quicksort",
+  "inputSchema": "array"
+}

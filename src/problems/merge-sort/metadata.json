@@ -1,0 +1,14 @@
+{
+  "id": 9002,
+  "slug": "merge-sort",
+  "title": "Merge Sort",
+  "difficulty": "medium",
+  "category": "sort",
+  "tags": [
+    "array",
+    "divide-and-conquer",
+    "sorting"
+  ],
+  "leetcodeUrl": "https://en.wikipedia.org/wiki/Merge_sort",
+  "inputSchema": "array"
+}

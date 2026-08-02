@@ -1,0 +1,10 @@
+{
+  "id": 704,
+  "slug": "binary-search",
+  "title": "Binary Search",
+  "difficulty": "easy",
+  "category": "search",
+  "tags": ["array", "binary-search"],
+  "leetcodeUrl": "https://leetcode.com/problems/binary-search/",
+  "inputSchema": "array-target"
+}

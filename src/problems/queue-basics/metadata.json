@@ -1,0 +1,13 @@
+{
+  "id": 9006,
+  "slug": "queue-basics",
+  "title": "Queue Operations",
+  "difficulty": "easy",
+  "category": "queue",
+  "tags": [
+    "queue",
+    "fifo"
+  ],
+  "leetcodeUrl": "https://en.wikipedia.org/wiki/Queue_(abstract_data_type)",
+  "inputSchema": "stack-ops"
+}

@@ -1,0 +1,13 @@
+{
+  "id": 9009,
+  "slug": "fenwick-tree",
+  "title": "Fenwick Tree (BIT)",
+  "difficulty": "hard",
+  "category": "segment-tree",
+  "tags": [
+    "fenwick-tree",
+    "binary-indexed-tree"
+  ],
+  "leetcodeUrl": "https://en.wikipedia.org/wiki/Fenwick_tree",
+  "inputSchema": "segment-ops"
+}

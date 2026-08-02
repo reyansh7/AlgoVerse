@@ -1,0 +1,12 @@
+{
+  "id": 9007,
+  "slug": "0-1-knapsack",
+  "title": "0/1 Knapsack",
+  "difficulty": "medium",
+  "category": "dp",
+  "tags": [
+    "dynamic-programming"
+  ],
+  "leetcodeUrl": "https://en.wikipedia.org/wiki/Knapsack_problem",
+  "inputSchema": "knapsack"
+}

@@ -1,0 +1,26 @@
+[
+  {
+    "id": "704-1",
+    "label": "Example 1 — find 9",
+    "input": { "array": [-1, 0, 3, 5, 9, 12], "target": 9 },
+    "createdAt": 0
+  },
+  {
+    "id": "704-2",
+    "label": "Example 2 — missing 2",
+    "input": { "array": [-1, 0, 3, 5, 9, 12], "target": 2 },
+    "createdAt": 0
+  },
+  {
+    "id": "704-3",
+    "label": "First element",
+    "input": { "array": [1, 2, 3, 4, 5], "target": 1 },
+    "createdAt": 0
+  },
+  {
+    "id": "704-4",
+    "label": "Last element",
+    "input": { "array": [1, 2, 3, 4, 5], "target": 5 },
+    "createdAt": 0
+  }
+]

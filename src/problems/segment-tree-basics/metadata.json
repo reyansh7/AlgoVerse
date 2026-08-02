@@ -1,0 +1,13 @@
+{
+  "id": 9008,
+  "slug": "segment-tree",
+  "title": "Segment Tree Range Sum",
+  "difficulty": "hard",
+  "category": "segment-tree",
+  "tags": [
+    "segment-tree",
+    "array"
+  ],
+  "leetcodeUrl": "https://en.wikipedia.org/wiki/Segment_tree",
+  "inputSchema": "segment-ops"
+}

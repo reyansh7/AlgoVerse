@@ -1,0 +1,13 @@
+{
+  "id": 1,
+  "slug": "two-sum",
+  "title": "Two Sum",
+  "difficulty": "easy",
+  "category": "search",
+  "tags": [
+    "array",
+    "hash-table"
+  ],
+  "leetcodeUrl": "https://leetcode.com/problems/two-sum/",
+  "inputSchema": "two-sum"
+}

@@ -1,0 +1,21 @@
+[
+  {
+    "id": "st-1",
+    "label": "Build + query",
+    "input": {
+      "array": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11
+      ],
+      "query": [
+        1,
+        4
+      ]
+    },
+    "createdAt": 0
+  }
+]
