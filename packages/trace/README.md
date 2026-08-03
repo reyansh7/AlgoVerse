@@ -8,36 +8,55 @@ Language-independent execution trace schema, reducer, and player.
 
 Workspace package — available as `@algoverse/trace` from the monorepo root.
 
-## API
+## Public API
 
 ```ts
 import {
-  parseTrace,
-  reduceTrace,
-  TracePlayer,
+  // Constants
+  TRACE_VERSION,       // "0.1"
+  TRACE_EVENT_TYPES,   // seven event type strings
+
+  // Parse / validate / serialize
+  parseTrace,          // JSON string → TraceDocument (throws TraceValidationError)
+  validateTrace,       // unknown → TraceDocument
+  serializeTrace,      // TraceDocument → JSON string
+  TraceValidationError,// Error with optional `.path` field
+
+  // Reduce / play
+  reduceTrace,         // TraceDocument → Frame[]
+  applyTraceEvent,     // mutate one frame (advanced hosts)
+  TracePlayer,         // load / seek / next / previous / length / currentFrame
+
+  // Emit (TypeScript)
   TraceRecorder,
 } from "@algoverse/trace";
-
-const doc = parseTrace(json);
-const player = new TracePlayer();
-player.load(doc);
-player.seek(0);
-player.next();
-player.previous();
-const frame = player.currentFrame;
-const n = player.length;
 ```
 
-**Bootstrap (v0.1):** seed the array with `metadata.initial.array` only.
+### TracePlayer
+
+| Member | Role |
+|--------|------|
+| `load(doc)` | Reduce document; reset index to 0 |
+| `seek(i)` | Jump to frame (clamped) |
+| `next()` / `previous()` | Step ±1 |
+| `length` | Frame count |
+| `currentFrame` / `current` | Frame at index |
+| `previousFrame` | Prior frame (diff animation) |
+| `restart()` / `clear()` | Reset / unload |
+
+### Bootstrap (v0.1)
+
+Seed the array with `metadata.initial.array` only.
 `assign` never seeds or mutates structures. See [docs/TRACE.md](../../docs/TRACE.md).
 
-See `schema/trace-v0.1.json` and `src/events.ts` for the seven event types:
-`assign`, `compare`, `swap`, `call`, `return`, `line`, `highlight`.
+Events: `assign`, `compare`, `swap`, `call`, `return`, `line`, `highlight`.
+
+JSON Schema: [`schema/trace-v0.1.json`](./schema/trace-v0.1.json).
 
 ## Test
 
 ```bash
 npm run test -w @algoverse/trace
+# or from root:
+npm run test:trace
 ```
-
-Covers schema validation, reduce, TraceRecorder, and TracePlayer (`load` / `seek` / `next` / `previous` / `currentFrame`).

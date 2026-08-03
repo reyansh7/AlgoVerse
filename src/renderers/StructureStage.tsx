@@ -23,7 +23,7 @@ export function StructureStage({ state, previous }: Props) {
   if (!state) {
     return (
       <div className="flex h-full items-center justify-center text-text-muted">
-        No execution state yet
+        No execution state yet — upload a .trace.json or load the sample
       </div>
     );
   }

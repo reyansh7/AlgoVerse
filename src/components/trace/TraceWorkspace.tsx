@@ -16,6 +16,7 @@ import { usePlayerStore } from "@/store/playerStore";
 import { useSelectionStore } from "@/store/selectionStore";
 import { frameToExecutionState } from "@/engine/state";
 import type { ExecutionState } from "@/core/types/execution";
+import { cn } from "@/lib/cn";
 
 async function loadSample(): Promise<string> {
   const res = await fetch(`/samples/bubble.trace.json?t=${Date.now()}`);
@@ -38,6 +39,8 @@ export function TraceWorkspace() {
   const fileRef = useRef<HTMLInputElement>(null);
   const loadedOnce = useRef(false);
   const [paste, setPaste] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [dragOver, setDragOver] = useState(false);
 
   const document = useTraceStore((s) => s.document);
   const error = useTraceStore((s) => s.error);
@@ -79,7 +82,6 @@ export function TraceWorkspace() {
     [setDocument, loadPlayer, selectEvent, setError],
   );
 
-  // Load ?src= once on mount (Strict Mode safe).
   useEffect(() => {
     if (loadedOnce.current) return;
     loadedOnce.current = true;
@@ -88,6 +90,7 @@ export function TraceWorkspace() {
     const src = params.get("src");
 
     (async () => {
+      setLoading(true);
       try {
         if (src) {
           const data = params.get("data");
@@ -116,6 +119,8 @@ export function TraceWorkspace() {
         applyJson(await loadSample(), "examples/bubble.trace.json");
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load trace");
+      } finally {
+        setLoading(false);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only bootstrap
@@ -148,6 +153,10 @@ export function TraceWorkspace() {
     applyJson(await file.text(), file.name);
   };
 
+  const resetFileInput = () => {
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
   return (
     <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-7xl flex-col gap-4 px-5 pb-10 pt-24">
       <header className="flex flex-wrap items-end justify-between gap-4">
@@ -177,9 +186,12 @@ export function TraceWorkspace() {
             type="button"
             onClick={async () => {
               try {
+                setLoading(true);
                 applyJson(await loadSample(), "examples/bubble.trace.json");
               } catch (e) {
                 setError(e instanceof Error ? e.message : "Sample load failed");
+              } finally {
+                setLoading(false);
               }
             }}
             className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-bg-deep transition hover:brightness-110"
@@ -200,13 +212,18 @@ export function TraceWorkspace() {
             onChange={(e) => {
               const f = e.target.files?.[0];
               if (f) void onFile(f);
+              resetFileInput();
             }}
           />
         </div>
       </header>
 
       {error && (
-        <div className="flex items-start justify-between gap-3 rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+        <div
+          role="alert"
+          aria-live="assertive"
+          className="flex items-start justify-between gap-3 rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger"
+        >
           <span>{error}</span>
           <button
             type="button"
@@ -221,8 +238,38 @@ export function TraceWorkspace() {
 
       <div className="grid flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex min-h-0 flex-col gap-4">
-          <div className="glass relative flex min-h-[340px] flex-1 flex-col overflow-hidden rounded-2xl p-4 md:min-h-[400px]">
-            <StructureStage state={state} previous={previous} />
+          <div
+            className={cn(
+              "glass relative flex min-h-[340px] flex-1 flex-col overflow-hidden rounded-2xl p-4 md:min-h-[400px]",
+              dragOver && "ring-2 ring-accent/50",
+            )}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              const f = e.dataTransfer.files?.[0];
+              if (f) void onFile(f);
+            }}
+          >
+            {loading && !state ? (
+              <div className="flex h-full flex-col items-center justify-center gap-2 text-text-muted">
+                <p className="text-sm">Loading trace…</p>
+              </div>
+            ) : !state ? (
+              <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-text-muted">
+                <Upload className="h-8 w-8 opacity-50" />
+                <p className="text-sm">
+                  Drop a <code className="text-accent">.trace.json</code> here, or
+                  use Upload / Load sample.
+                </p>
+              </div>
+            ) : (
+              <StructureStage state={state} previous={previous} />
+            )}
           </div>
           {state?.description && (
             <p className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 text-sm leading-relaxed text-text-primary/90">
@@ -236,8 +283,8 @@ export function TraceWorkspace() {
           <div className="h-[180px] shrink-0">
             <VariablesPanel state={state} />
           </div>
-          {codeLines.length > 0 && (
-            <div className="h-[200px] shrink-0">
+          <div className="h-[200px] shrink-0">
+            {codeLines.length > 0 ? (
               <CodePanel
                 title="Source"
                 code={codeLines}
@@ -245,8 +292,14 @@ export function TraceWorkspace() {
                   state?.line && state.line > 0 ? state.line - 1 : null
                 }
               />
-            </div>
-          )}
+            ) : (
+              <div className="glass flex h-full items-center justify-center rounded-2xl px-4 text-center text-sm text-text-muted">
+                No source in this trace — pass{" "}
+                <code className="mx-1 text-accent">source_code=</code> to{" "}
+                <code className="text-accent">Trace(...)</code> in the SDK.
+              </div>
+            )}
+          </div>
           <div className="min-h-[220px] flex-1">
             <EventLog
               events={document?.events ?? []}
@@ -265,7 +318,7 @@ export function TraceWorkspace() {
           onChange={(e) => setPaste(e.target.value)}
           rows={8}
           className="mt-3 w-full rounded-xl border border-white/10 bg-black/30 p-3 font-mono text-xs text-text-primary outline-none focus:border-accent/40"
-          placeholder='{ "version": "0.1", "language": "python", "algorithm": "…", "events": [] }'
+          placeholder='{ "version": "0.1", "language": "python", "algorithm": "…", "metadata": { "initial": { "array": [5, 1, 4, 2] } }, "events": [] }'
         />
         <button
           type="button"

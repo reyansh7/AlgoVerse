@@ -14,7 +14,10 @@
 npm install
 pip install -e sdk/python
 npm run test:trace
+npm run test:python
 npm run dev
+# other terminal — smoke the CLI golden path:
+npm run algoverse -- run examples/bubble.py --no-open
 ```
 
 ## Packages

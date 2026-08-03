@@ -11,12 +11,34 @@ import os
 from pathlib import Path
 from typing import Any, Mapping, MutableMapping, Optional, Sequence, Union
 
+_BOOTSTRAP_HINT = (
+    'Trace v0.1 requires metadata={"initial": {"array": [...]}}. '
+    "Structures are never inferred from variable names; "
+    "assign() only updates variables. "
+    "See docs/TRACE.md in the AlgoVerse repository."
+)
+
+
+class TraceError(ValueError):
+    """Raised for AlgoVerse Python SDK usage / export errors."""
+
+
+def _validate_bootstrap(metadata: Mapping[str, Any]) -> None:
+    """Ensure metadata.initial.array is present (Trace v0.1 structure seed)."""
+    initial = metadata.get("initial")
+    if not isinstance(initial, Mapping):
+        raise TraceError(_BOOTSTRAP_HINT)
+    array = initial.get("array")
+    if not isinstance(array, list):
+        raise TraceError(_BOOTSTRAP_HINT)
+
 
 class Trace:
     """Accumulate AlgoVerse Trace v0.1 events and export `.trace.json`.
 
-    Structures are seeded only via ``metadata["initial"]["array"]``.
-    ``assign`` is a pure variable bind and never seeds structures.
+    Structures are seeded only via ``metadata["initial"]["array"]`` (required
+    at construction). ``assign`` is a pure variable bind and never seeds
+    structures.
     """
 
     def __init__(
@@ -28,11 +50,17 @@ class Trace:
         source_code: Optional[str] = None,
         metadata: Optional[MutableMapping[str, Any]] = None,
     ) -> None:
+        if not algorithm or not isinstance(algorithm, str):
+            raise TraceError('Trace requires a non-empty algorithm id, e.g. algorithm="bubble_sort"')
+
+        meta = dict(metadata or {})
+        _validate_bootstrap(meta)
+
         self.algorithm = algorithm
         self.language = language
         self.source_path = source_path
         self.source_code = source_code
-        self.metadata: MutableMapping[str, Any] = dict(metadata or {})
+        self.metadata: MutableMapping[str, Any] = meta
         self._events: list[dict[str, Any]] = []
         self._t = 0
 
@@ -68,6 +96,7 @@ class Trace:
         line: Optional[int] = None,
         description: Optional[str] = None,
     ) -> "Trace":
+        """Bind a variable. Does not seed or mutate structures."""
         return self._push(
             "assign",
             {"name": name, "value": value},
@@ -166,19 +195,8 @@ class Trace:
         return self._push("highlight", data, line=line, description=description)
 
     def to_dict(self) -> dict[str, Any]:
-        """Build a TraceDocument-compatible dict (v0.1).
-
-        Requires ``metadata["initial"]["array"]`` — structures are never
-        inferred from variable names.
-        """
-        initial = self.metadata.get("initial") if self.metadata else None
-        if not isinstance(initial, Mapping) or not isinstance(
-            initial.get("array"), list
-        ):
-            raise ValueError(
-                'Trace v0.1 requires metadata={"initial": {"array": [...]}} '
-                "(assign does not seed structures)"
-            )
+        """Build a TraceDocument-compatible dict (v0.1)."""
+        _validate_bootstrap(self.metadata)
 
         doc: dict[str, Any] = {
             "version": "0.1",
@@ -209,7 +227,23 @@ class Trace:
         if path is None:
             path = f"{self.algorithm}.trace.json"
         out = Path(path)
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(json.dumps(self.to_dict(), indent=2), encoding="utf-8")
+
+        try:
+            payload = json.dumps(self.to_dict(), indent=2)
+        except TypeError as e:
+            raise TraceError(
+                "Trace contains a value that is not JSON-serializable. "
+                "Use only JSON-friendly types in assign/compare/return_/args "
+                f"(str, int, float, bool, list, dict, null). Detail: {e}"
+            ) from e
+
+        try:
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_text(payload, encoding="utf-8")
+        except OSError as e:
+            raise TraceError(
+                f"Could not write trace to {out.resolve()}: {e}"
+            ) from e
+
         print(f"[algoverse] wrote {out.resolve()}", flush=True)
         return out.resolve()

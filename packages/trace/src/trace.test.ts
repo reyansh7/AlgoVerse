@@ -84,7 +84,7 @@ describe("@algoverse/trace", () => {
     assert.deepEqual(frames[frames.length - 1].variables.array, [1, 3]);
   });
 
-  it("rejects traces without metadata.initial.array", () => {
+  it("rejects traces without metadata.initial.array with a fix hint", () => {
     assert.throws(
       () =>
         validateTrace({
@@ -95,7 +95,9 @@ describe("@algoverse/trace", () => {
         }),
       (err: unknown) =>
         err instanceof TraceValidationError &&
-        err.path === "metadata.initial.array",
+        err.path === "metadata.initial.array" &&
+        err.message.includes("metadata.initial.array") &&
+        err.message.includes("assign() never seeds"),
     );
   });
 

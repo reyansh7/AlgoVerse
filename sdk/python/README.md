@@ -78,7 +78,8 @@ Trace(
 | `swap` | Mutates the array structure in the Trace reducer |
 | Variable names | User-defined; must not affect rendering |
 
-`Trace.to_dict()` / `write()` raise `ValueError` if `metadata.initial.array` is missing.
+`Trace(...)` raises **`TraceError` at construction** if `metadata.initial.array` is missing.
+`write()` also raises `TraceError` for non-JSON values or I/O failures.
 
 ---
 
@@ -96,6 +97,8 @@ All event methods return `self` for chaining. Optional kwargs on every event:
 | `return_(frame, value=…)` | `return` | `{ frame, value? }` |
 | `line(n)` | `line` | `{ line }` |
 | `highlight(indices=…, kinds=…, sorted=…, clear=…)` | `highlight` | optional fields |
+
+Public exports: `Trace`, `TraceError`, `__version__`.
 
 `return_` is named that way because `return` is a Python keyword.
 
@@ -175,5 +178,6 @@ From the repo root (with the package on `PYTHONPATH` or installed editable):
 
 ```bash
 pip install -e sdk/python
-python -m unittest discover -s sdk/python/tests -v
+npm run test:python
+# or: python -m unittest discover -s sdk/python/tests -v
 ```

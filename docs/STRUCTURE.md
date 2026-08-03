@@ -16,7 +16,6 @@ AlgoVerse/
     │   ├── scheduler/       # Step interval helpers
     │   └── types/           # ExecutionState, structures, …
     ├── engine/              # Runtime orchestration
-    │   ├── playback/        # (stores own React playback)
     │   ├── animation/       # Diff → animation plans
     │   ├── state/           # Frame ↔ ExecutionState adapters
     │   ├── timeline/        # buildTimelineFromEvents
@@ -24,8 +23,6 @@ AlgoVerse/
     ├── renderers/           # Structure views (frames only)
     ├── panels/              # Inspector UI
     │   ├── Variables/
-    │   ├── Stack/           # v0.2 stub
-    │   ├── Memory/          # v0.2 stub
     │   ├── Timeline/
     │   └── EventLog/
     ├── sdk/ · cli/ · examples/   # Pointers to repo-root packages

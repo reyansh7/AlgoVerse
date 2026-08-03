@@ -35,9 +35,11 @@ export function TracePlaybackControls() {
 
   const total = frames.length;
   const max = Math.max(0, total - 1);
+  const empty = total === 0;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (empty) return;
       if (
         e.target instanceof HTMLInputElement ||
         e.target instanceof HTMLTextAreaElement
@@ -55,7 +57,10 @@ export function TracePlaybackControls() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [toggle, next, prev]);
+  }, [toggle, next, prev, empty]);
+
+  const btn =
+    "rounded-lg p-2 text-text-muted transition hover:bg-white/5 hover:text-text-primary disabled:pointer-events-none disabled:opacity-30";
 
   return (
     <div className="glass flex flex-col gap-3 rounded-2xl px-4 py-3">
@@ -64,7 +69,8 @@ export function TracePlaybackControls() {
           <button
             type="button"
             onClick={restart}
-            className="rounded-lg p-2 text-text-muted transition hover:bg-white/5 hover:text-text-primary"
+            disabled={empty}
+            className={btn}
             aria-label="Restart"
           >
             <RotateCcw className="h-4 w-4" />
@@ -72,7 +78,8 @@ export function TracePlaybackControls() {
           <button
             type="button"
             onClick={() => jump(0)}
-            className="rounded-lg p-2 text-text-muted transition hover:bg-white/5 hover:text-text-primary"
+            disabled={empty}
+            className={btn}
             aria-label="First"
           >
             <ChevronsLeft className="h-4 w-4" />
@@ -80,7 +87,8 @@ export function TracePlaybackControls() {
           <button
             type="button"
             onClick={prev}
-            className="rounded-lg p-2 text-text-muted transition hover:bg-white/5 hover:text-text-primary"
+            disabled={empty}
+            className={btn}
             aria-label="Previous"
           >
             <SkipBack className="h-4 w-4" />
@@ -88,7 +96,8 @@ export function TracePlaybackControls() {
           <button
             type="button"
             onClick={() => (isPlaying ? pause() : play())}
-            className="rounded-xl bg-accent p-2.5 text-bg-deep transition hover:brightness-110"
+            disabled={empty}
+            className="rounded-xl bg-accent p-2.5 text-bg-deep transition hover:brightness-110 disabled:pointer-events-none disabled:opacity-30"
             aria-label={isPlaying ? "Pause" : "Play"}
           >
             {isPlaying ? (
@@ -100,7 +109,8 @@ export function TracePlaybackControls() {
           <button
             type="button"
             onClick={next}
-            className="rounded-lg p-2 text-text-muted transition hover:bg-white/5 hover:text-text-primary"
+            disabled={empty}
+            className={btn}
             aria-label="Next"
           >
             <SkipForward className="h-4 w-4" />
@@ -108,7 +118,8 @@ export function TracePlaybackControls() {
           <button
             type="button"
             onClick={() => jump(max)}
-            className="rounded-lg p-2 text-text-muted transition hover:bg-white/5 hover:text-text-primary"
+            disabled={empty}
+            className={btn}
             aria-label="Last"
           >
             <ChevronsRight className="h-4 w-4" />
@@ -116,7 +127,7 @@ export function TracePlaybackControls() {
         </div>
 
         <div className="font-mono text-xs text-text-muted">
-          {total === 0 ? "—" : `${currentStep + 1} / ${total}`}
+          {empty ? "—" : `${currentStep + 1} / ${total}`}
         </div>
 
         <div className="flex items-center gap-1">
@@ -125,8 +136,10 @@ export function TracePlaybackControls() {
               key={s}
               type="button"
               onClick={() => setSpeed(s)}
+              disabled={empty}
+              aria-pressed={speed === s}
               className={cn(
-                "rounded-md px-2 py-1 font-mono text-[10px] transition",
+                "rounded-md px-2 py-1 font-mono text-[10px] transition disabled:opacity-30",
                 speed === s
                   ? "bg-accent/20 text-accent"
                   : "text-text-muted hover:text-text-primary",
@@ -144,10 +157,13 @@ export function TracePlaybackControls() {
         max={max}
         value={Math.min(currentStep, max)}
         onChange={(e) => jump(Number(e.target.value))}
-        disabled={total === 0}
+        disabled={empty}
         className="w-full accent-accent"
         aria-label="Timeline"
       />
+      <p className="text-[10px] text-text-muted">
+        Shortcuts: Space play/pause · ← → step
+      </p>
     </div>
   );
 }

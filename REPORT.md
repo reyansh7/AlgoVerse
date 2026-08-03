@@ -128,16 +128,16 @@ TracePlaybackControls      PlaybackControls            PlaybackControls
 
 ---
 
-## Verification snapshot (post PR 2–5)
+## Verification snapshot (post Sprint 2)
 
 | Check | Status |
 |-------|--------|
-| `npm run test:trace` | Pass (9 tests) |
-| `npm run algoverse -- run examples/bubble.py` | Validates Trace; opens `/trace` |
-| TraceWorkspace → StructureStage | Done |
-| StructureStage algorithm-name routing | Removed |
-| Python SDK seven events + `write` | Done |
-| CLI pipeline | Done |
+| `npm run test:trace` | Pass (17 tests) |
+| `npm run test:python` | Pass (11 tests) |
+| `npm run algoverse -- run examples/bubble.py --no-open` | Validates Trace |
+| TraceWorkspace loading / upload / empty controls | Done |
+| Dead alias renderers / unused deps cleanup | Done |
+| CLI `--help` / `--version` | Done |
 
 ---
 

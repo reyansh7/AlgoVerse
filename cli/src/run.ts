@@ -11,50 +11,94 @@ import { spawn } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, resolve, basename } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseTrace } from "@algoverse/trace";
+import { parseTrace, TraceValidationError } from "@algoverse/trace";
 import { openTracePlayer } from "./serve";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");
 const SDK_PYTHON = join(REPO_ROOT, "sdk", "python");
+const CLI_VERSION = "0.1.0";
 
-function usage(): never {
-  console.log(`AlgoVerse CLI v0.1
+function printHelp(): void {
+  console.log(`AlgoVerse CLI v${CLI_VERSION}
 
 Usage:
-  algoverse run <script.py> [--out <path>] [--port <n>] [--no-open]
+  npm run algoverse -- run <script.py> [options]
+  npx algoverse run <script.py> [options]
+
+Options:
+  --out <path>    Trace output path
+  --port <n>      Trace Player port (default 3000)
+  --no-open       Validate only; do not open a browser
+  -h, --help      Show help
+  -V, --version   Show version
 
 Environment:
   ALGOVERSE_TRACE_OUT   Output .trace.json path
   ALGOVERSE_PLAYER_URL  Trace Player base (default http://localhost:3000/trace)
+
+Examples:
+  npm run algoverse -- run examples/bubble.py
+  npm run algoverse -- run examples/bubble.py --no-open
 `);
-  process.exit(1);
 }
 
 function parseArgs(argv: string[]) {
-  if (argv.length === 0 || argv[0] === "-h" || argv[0] === "--help") usage();
+  if (argv.length === 0 || argv[0] === "-h" || argv[0] === "--help") {
+    printHelp();
+    process.exit(0);
+  }
+  if (argv[0] === "-V" || argv[0] === "--version") {
+    console.log(`algoverse ${CLI_VERSION}`);
+    process.exit(0);
+  }
+
   const cmd = argv[0];
   if (cmd !== "run") {
     console.error(`Unknown command: ${cmd}`);
-    usage();
+    printHelp();
+    process.exit(1);
   }
   const script = argv[1];
-  if (!script) usage();
+  if (!script || script.startsWith("-")) {
+    console.error("Missing script path.\n");
+    printHelp();
+    process.exit(1);
+  }
 
   let out: string | undefined;
   let port = 3000;
   let openBrowserFlag = true;
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
-    if (a === "--out") out = argv[++i];
-    else if (a === "--port") port = Number(argv[++i]);
-    else if (a === "--no-open") openBrowserFlag = false;
+    if (a === "--out") {
+      const v = argv[++i];
+      if (!v || v.startsWith("-")) {
+        throw new Error("--out requires a path argument");
+      }
+      out = v;
+    } else if (a === "--port") {
+      const v = argv[++i];
+      if (!v || v.startsWith("-")) {
+        throw new Error("--port requires a number");
+      }
+      port = Number(v);
+      if (!Number.isFinite(port) || port <= 0) {
+        throw new Error(`--port must be a positive number (got ${v})`);
+      }
+    } else if (a === "--no-open") {
+      openBrowserFlag = false;
+    } else if (a === "-h" || a === "--help") {
+      printHelp();
+      process.exit(0);
+    } else {
+      throw new Error(`Unknown flag: ${a}`);
+    }
   }
-  // npm workspaces change cwd to the package dir; prefer the caller's cwd.
-  const base =
-    process.env.INIT_CWD || process.env.PWD || process.cwd();
+
+  const base = process.env.INIT_CWD || process.env.PWD || process.cwd();
   return {
-    script: resolve(base, script!),
+    script: resolve(base, script),
     out: out ? resolve(base, out) : undefined,
     port,
     open: openBrowserFlag,
@@ -109,6 +153,15 @@ function findNewestTrace(dir: string, sinceMs: number): string | null {
   return best?.path ?? null;
 }
 
+function formatValidationError(err: TraceValidationError): string {
+  const tip =
+    err.path.includes("metadata.initial") ||
+    err.message.includes("metadata.initial")
+      ? "\nHint: pass metadata={\"initial\": {\"array\": [...]}} to Trace(...). See docs/TRACE.md."
+      : "\nHint: see docs/TRACE.md and packages/trace/schema/trace-v0.1.json.";
+  return `Invalid TraceDocument — ${err.message}${tip}`;
+}
+
 export async function main(argv: string[]): Promise<void> {
   const { script, out, port, open } = parseArgs(argv);
 
@@ -137,7 +190,15 @@ export async function main(argv: string[]): Promise<void> {
   }
 
   const json = readFileSync(tracePath, "utf8");
-  const doc = parseTrace(json);
+  let doc;
+  try {
+    doc = parseTrace(json);
+  } catch (e) {
+    if (e instanceof TraceValidationError) {
+      throw new Error(formatValidationError(e));
+    }
+    throw e;
+  }
   console.log(
     `[algoverse] validated ${tracePath} (${doc.events.length} events, algorithm=${doc.algorithm})`,
   );

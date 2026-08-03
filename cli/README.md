@@ -30,6 +30,8 @@ npm run algoverse -- run examples/bubble.py
 npm run algoverse -- run examples/bubble.py --no-open
 npm run algoverse -- run examples/bubble.py --out tmp/out.trace.json
 npm run algoverse -- run examples/bubble.py --port 3000
+node cli/bin/algoverse.js --help
+node cli/bin/algoverse.js --version
 ```
 
 `algoverse` is not installed globally by default. Prefer the npm script above,
@@ -49,8 +51,8 @@ npx algoverse run examples/bubble.py
 3. Spawn Python on the script.  
 4. Discover the written `.trace.json`.  
 5. Validate with `@algoverse/trace` `parseTrace` (requires `metadata.initial.array`).  
-6. Unless `--no-open`, copy JSON to `public/traces/` and open  
-   `http://localhost:<port>/trace?src=/traces/<name>`.
+6. Unless `--no-open`, copy JSON to `public/traces/` and open the player URL.  
+7. If the player port does not respond, print a tip to run `npm run dev`.
 
 ---
 
@@ -58,9 +60,11 @@ npx algoverse run examples/bubble.py
 
 | Flag | Meaning |
 |------|---------|
-| `--out <path>` | Trace output path |
+| `--out <path>` | Trace output path (required argument) |
 | `--port <n>` | Player port (default `3000`) |
 | `--no-open` | Validate only; do not open a browser |
+| `-h`, `--help` | Help (exit 0) |
+| `-V`, `--version` | Version (exit 0) |
 
 ---
 
@@ -81,5 +85,5 @@ npx algoverse run examples/bubble.py
 | `algoverse` not recognized | Use `npm run algoverse -- run …` from repo root |
 | `No module named 'algoverse'` | `pip install -e sdk/python` |
 | Validation error on `metadata.initial.array` | Pass `metadata={"initial": {"array": […]}}` to `Trace(...)` |
-| Browser blank / 404 | Run `npm run dev`; confirm file under `public/traces/` |
+| Browser blank / tip about `npm run dev` | Start the Next app; confirm file under `public/traces/` |
 | Stale trace in browser | CLI cache-busts with `&t=`; hard-refresh if needed |

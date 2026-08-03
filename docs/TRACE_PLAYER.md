@@ -21,13 +21,35 @@ TraceDocument JSON
  StructureStage → ArrayRenderer / …  (structure presence only)
 ```
 
+## Entry points
+
+| Entry | Behavior |
+|-------|----------|
+| `/trace` | Loads built-in sample (`public/samples/bubble.trace.json`) |
+| `/trace?src=/traces/foo.json` | Fetches that public URL (CLI writes here) |
+| **Upload** | File picker for `.trace.json` |
+| **Drop zone** | Drag a `.trace.json` onto the stage |
+| **Paste** | Expand “Paste trace JSON” and parse |
+| **Load sample** | Re-fetch the bubble sample |
+
+Paste documents must include `metadata.initial.array` (v0.1).
+
+## UI chrome
+
+| Control | Notes |
+|---------|--------|
+| `TracePlaybackControls` | Bound to `playerStore` (not Learn `PlaybackControls`) |
+| Keyboard | Space = play/pause · ← / → = step (when a trace is loaded) |
+| Variables / Event log / Source | Shared panels; source shows a hint if `source.code` is missing |
+
+Empty playback: controls are disabled until frames exist.
+
 ## Rules
 
 - **Source of truth:** `TraceDocument` / `Frame` from `@algoverse/trace`.  
 - **Website DTO:** `ExecutionState` is an adapter output for existing panels/renderers.  
 - **Routing:** `StructureStage` never reads language, algorithm id, or SDK.  
-- **Learn / Playground:** still use `playback-store` + their own timelines; unchanged by this path.  
-- **Do not** put algorithm logic in renderers; evolve Trace events + reduce instead.
+- **Learn / Playground:** still use `playback-store`; unchanged by this path.  
 
 ## Key files
 
@@ -40,8 +62,6 @@ TraceDocument JSON
 | Frame → UI | `src/engine/state/frame-to-execution.ts` |
 | Router | `src/renderers/StructureStage.tsx` |
 | Pure engine | `packages/trace/src/player.ts` (`load`, `seek`, `next`, `previous`, `length`, `currentFrame`) |
-| Playback chrome | `src/panels/Timeline/TracePlaybackControls.tsx` (Trace-bound; Learn keeps `PlaybackControls`) |
-| Variables | `src/panels/Variables/VariablesPanel.tsx` |
-| Code | `src/panels/Variables/CodePanel.tsx` |
+| Playback chrome | `src/panels/Timeline/TracePlaybackControls.tsx` |
 
 CLI opens this page via `?src=/traces/<file>` after validation (`cli/src/serve.ts`).

@@ -22,23 +22,29 @@ function isObject(v: unknown): v is Record<string, unknown> {
 
 function assertEvent(raw: unknown, path: string): TraceEvent {
   if (!isObject(raw)) {
-    throw new TraceValidationError("event must be an object", path);
+    throw new TraceValidationError(
+      "event must be an object — each events[] item needs type, timestamp, and data",
+      path,
+    );
   }
   const type = raw.type;
   if (typeof type !== "string" || !TRACE_EVENT_TYPES.includes(type as TraceEventType)) {
     throw new TraceValidationError(
-      `type must be one of ${TRACE_EVENT_TYPES.join(", ")}`,
+      `type must be one of: ${TRACE_EVENT_TYPES.join(", ")}`,
       `${path}.type`,
     );
   }
   if (typeof raw.timestamp !== "number" || !Number.isFinite(raw.timestamp)) {
-    throw new TraceValidationError("timestamp must be a finite number", `${path}.timestamp`);
+    throw new TraceValidationError(
+      "timestamp must be a finite number (emitter clock)",
+      `${path}.timestamp`,
+    );
   }
   if (raw.line !== undefined && typeof raw.line !== "number") {
-    throw new TraceValidationError("line must be a number", `${path}.line`);
+    throw new TraceValidationError("optional line must be a number (1-based)", `${path}.line`);
   }
   if (raw.description !== undefined && typeof raw.description !== "string") {
-    throw new TraceValidationError("description must be a string", `${path}.description`);
+    throw new TraceValidationError("optional description must be a string", `${path}.description`);
   }
   if (!isObject(raw.data)) {
     throw new TraceValidationError("data must be an object", `${path}.data`);
@@ -48,31 +54,45 @@ function assertEvent(raw: unknown, path: string): TraceEvent {
   switch (type as TraceEventType) {
     case "assign":
       if (typeof data.name !== "string") {
-        throw new TraceValidationError("data.name required", `${path}.data.name`);
+        throw new TraceValidationError(
+          'assign requires data.name (string) — e.g. { "name": "i", "value": 0 }',
+          `${path}.data.name`,
+        );
       }
       if (!("value" in data)) {
-        throw new TraceValidationError("data.value required", `${path}.data.value`);
+        throw new TraceValidationError(
+          "assign requires data.value",
+          `${path}.data.value`,
+        );
       }
       break;
     case "compare":
     case "swap":
       if (typeof data.i !== "number" || typeof data.j !== "number") {
-        throw new TraceValidationError("data.i and data.j required", `${path}.data`);
+        throw new TraceValidationError(
+          `${type} requires numeric data.i and data.j (array indices)`,
+          `${path}.data`,
+        );
       }
       break;
     case "call":
     case "return":
       if (typeof data.frame !== "string") {
-        throw new TraceValidationError("data.frame required", `${path}.data.frame`);
+        throw new TraceValidationError(
+          `${type} requires data.frame (string frame name)`,
+          `${path}.data.frame`,
+        );
       }
       break;
     case "line":
       if (typeof data.line !== "number") {
-        throw new TraceValidationError("data.line required", `${path}.data.line`);
+        throw new TraceValidationError(
+          "line event requires data.line (1-based source line)",
+          `${path}.data.line`,
+        );
       }
       break;
     case "highlight":
-      // all fields optional
       break;
   }
 
@@ -85,32 +105,39 @@ function assertEvent(raw: unknown, path: string): TraceEvent {
  */
 export function validateTrace(raw: unknown): TraceDocument {
   if (!isObject(raw)) {
-    throw new TraceValidationError("trace must be an object");
+    throw new TraceValidationError(
+      'trace must be a JSON object with version, language, algorithm, metadata, and events',
+    );
   }
   if (raw.version !== TRACE_VERSION) {
     throw new TraceValidationError(
-      `version must be "${TRACE_VERSION}"`,
+      `version must be "${TRACE_VERSION}" (got ${JSON.stringify(raw.version)}) — see docs/TRACE.md`,
       "version",
     );
   }
   if (typeof raw.language !== "string" || !raw.language) {
-    throw new TraceValidationError("language must be a non-empty string", "language");
+    throw new TraceValidationError(
+      'language must be a non-empty string (metadata only; renderers ignore it)',
+      "language",
+    );
   }
   if (typeof raw.algorithm !== "string" || !raw.algorithm) {
-    throw new TraceValidationError("algorithm must be a non-empty string", "algorithm");
+    throw new TraceValidationError(
+      'algorithm must be a non-empty string id, e.g. "bubble_sort"',
+      "algorithm",
+    );
   }
   if (!Array.isArray(raw.events)) {
-    throw new TraceValidationError("events must be an array", "events");
+    throw new TraceValidationError("events must be an array of Trace events", "events");
   }
 
   const events = raw.events.map((e, i) => assertEvent(e, `events[${i}]`));
 
-  // Array bootstrap: metadata.initial.array only (never inferred from variable names).
   const meta = isObject(raw.metadata) ? raw.metadata : undefined;
   const initial = meta && isObject(meta.initial) ? meta.initial : undefined;
   if (!Array.isArray(initial?.array)) {
     throw new TraceValidationError(
-      "trace must seed an array via metadata.initial.array (assign does not seed structures)",
+      'v0.1 requires metadata.initial.array (list). Example: metadata: { "initial": { "array": [5, 1, 4, 2] } }. assign() never seeds structures — see docs/TRACE.md',
       "metadata.initial.array",
     );
   }
@@ -119,7 +146,6 @@ export function validateTrace(raw: unknown): TraceDocument {
     version: TRACE_VERSION,
     language: raw.language,
     algorithm: raw.algorithm,
-    // Validated above — metadata.initial.array is present.
     metadata: meta as TraceDocument["metadata"],
     events,
   };
@@ -141,7 +167,7 @@ export function parseTrace(json: string): TraceDocument {
     raw = JSON.parse(json);
   } catch (e) {
     throw new TraceValidationError(
-      `invalid JSON: ${e instanceof Error ? e.message : String(e)}`,
+      `invalid JSON: ${e instanceof Error ? e.message : String(e)} — expected a TraceDocument object`,
     );
   }
   return validateTrace(raw);

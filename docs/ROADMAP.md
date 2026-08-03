@@ -5,7 +5,9 @@
 - `@algoverse/trace` schema + reduce + player
 - Python SDK + `examples/bubble.py`
 - CLI `algoverse run`
-- Web Trace Player (`/trace`) + ArrayRenderer playback
+- Web Trace Player (`/trace`) + StructureStage / ArrayRenderer playback
+- Sprint 2 polish: SDK fail-fast, CLI UX, Player loading/upload, docs, hygiene  
+  (see [`docs/SPRINT2.md`](./SPRINT2.md))
 
 ## v0.2 — deferred
 
