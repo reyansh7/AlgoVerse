@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "algoverse"
+version = "0.1.0"
+description = "AlgoVerse Python SDK — emit language-independent execution traces"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "AlgoVerse" }]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/reyansh7/AlgoVerse"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["algoverse*"]

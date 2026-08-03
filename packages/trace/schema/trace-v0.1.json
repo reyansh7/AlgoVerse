@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://algoverse.dev/schemas/trace-v0.1.json",
+  "title": "AlgoVerse Trace Document v0.1",
+  "type": "object",
+  "required": ["version", "language", "algorithm", "events", "metadata"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "const": "0.1" },
+    "language": { "type": "string", "minLength": 1 },
+    "algorithm": { "type": "string", "minLength": 1 },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string" },
+        "code": { "type": "string" }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["initial"],
+      "properties": {
+        "initial": {
+          "type": "object",
+          "required": ["array"],
+          "properties": {
+            "array": {
+              "type": "array",
+              "items": { "type": ["number", "string"] },
+              "description": "Explicit structure bootstrap. Variable names never seed structures."
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "events": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/TraceEvent" }
+    }
+  },
+  "$defs": {
+    "TraceEvent": {
+      "type": "object",
+      "required": ["type", "timestamp", "data"],
+      "properties": {
+        "type": {
+          "enum": ["assign", "compare", "swap", "call", "return", "line", "highlight"]
+        },
+        "timestamp": { "type": "number" },
+        "line": { "type": "integer" },
+        "description": { "type": "string" },
+        "data": { "type": "object" }
+      }
+    }
+  }
+}

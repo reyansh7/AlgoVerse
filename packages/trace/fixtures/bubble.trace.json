@@ -1,0 +1,148 @@
+{
+  "version": "0.1",
+  "language": "python",
+  "algorithm": "bubble_sort",
+  "source": {
+    "path": "examples/bubble.py",
+    "code": "def bubble_sort(nums):\n    n = len(nums)\n    for i in range(n - 1):\n        for j in range(n - i - 1):\n            if nums[j] > nums[j + 1]:\n                nums[j], nums[j + 1] = nums[j + 1], nums[j]\n    return nums\n"
+  },
+  "metadata": {
+    "initial": {
+      "array": [5, 1, 4, 2]
+    }
+  },
+  "events": [
+    {
+      "type": "call",
+      "timestamp": 1,
+      "line": 1,
+      "description": "Enter bubble_sort",
+      "data": { "frame": "bubble_sort", "args": { "n": 4 } }
+    },
+    {
+      "type": "assign",
+      "timestamp": 2,
+      "line": 2,
+      "data": { "name": "array", "value": [5, 1, 4, 2] }
+    },
+    {
+      "type": "assign",
+      "timestamp": 3,
+      "line": 3,
+      "data": { "name": "i", "value": 0 }
+    },
+    {
+      "type": "compare",
+      "timestamp": 4,
+      "line": 5,
+      "description": "Compare 5 and 1",
+      "data": { "i": 0, "j": 1, "values": [5, 1] }
+    },
+    {
+      "type": "swap",
+      "timestamp": 5,
+      "line": 6,
+      "description": "Swap 5 and 1",
+      "data": { "i": 0, "j": 1 }
+    },
+    {
+      "type": "compare",
+      "timestamp": 6,
+      "line": 5,
+      "data": { "i": 1, "j": 2, "values": [5, 4] }
+    },
+    {
+      "type": "swap",
+      "timestamp": 7,
+      "line": 6,
+      "data": { "i": 1, "j": 2 }
+    },
+    {
+      "type": "compare",
+      "timestamp": 8,
+      "line": 5,
+      "data": { "i": 2, "j": 3, "values": [5, 2] }
+    },
+    {
+      "type": "swap",
+      "timestamp": 9,
+      "line": 6,
+      "data": { "i": 2, "j": 3 }
+    },
+    {
+      "type": "highlight",
+      "timestamp": 10,
+      "line": 3,
+      "description": "Pass 0 complete — 5 locked",
+      "data": {
+        "sorted": [3],
+        "kinds": { "3": "sorted" },
+        "indices": [3]
+      }
+    },
+    {
+      "type": "assign",
+      "timestamp": 11,
+      "line": 3,
+      "data": { "name": "i", "value": 1 }
+    },
+    {
+      "type": "compare",
+      "timestamp": 12,
+      "line": 5,
+      "data": { "i": 0, "j": 1, "values": [1, 4] }
+    },
+    {
+      "type": "compare",
+      "timestamp": 13,
+      "line": 5,
+      "data": { "i": 1, "j": 2, "values": [4, 2] }
+    },
+    {
+      "type": "swap",
+      "timestamp": 14,
+      "line": 6,
+      "data": { "i": 1, "j": 2 }
+    },
+    {
+      "type": "highlight",
+      "timestamp": 15,
+      "description": "Pass 1 complete",
+      "data": {
+        "sorted": [2, 3],
+        "kinds": { "2": "sorted", "3": "sorted" },
+        "indices": [2, 3]
+      }
+    },
+    {
+      "type": "assign",
+      "timestamp": 16,
+      "line": 3,
+      "data": { "name": "i", "value": 2 }
+    },
+    {
+      "type": "compare",
+      "timestamp": 17,
+      "line": 5,
+      "data": { "i": 0, "j": 1, "values": [1, 2] }
+    },
+    {
+      "type": "highlight",
+      "timestamp": 18,
+      "description": "Sorted",
+      "data": {
+        "clear": false,
+        "sorted": [0, 1, 2, 3],
+        "kinds": { "0": "sorted", "1": "sorted", "2": "sorted", "3": "sorted" },
+        "indices": [0, 1, 2, 3]
+      }
+    },
+    {
+      "type": "return",
+      "timestamp": 19,
+      "line": 7,
+      "description": "Return sorted array",
+      "data": { "frame": "bubble_sort", "value": [1, 2, 4, 5] }
+    }
+  ]
+}
