@@ -1,7 +1,8 @@
 """
 Trace recorder — mirrors @algoverse/trace TraceRecorder.
 
-Manual instrumentation only (v0.1). Emit the seven event types, then write JSON.
+Emit the seven event types, then write JSON. Used by manual instrumentation and
+by InstrumentationSession (auto control-flow); both produce the same TraceDocument.
 """
 
 from __future__ import annotations

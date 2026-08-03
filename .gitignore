@@ -53,3 +53,6 @@ sdk/python/*.egg-info/
 /public/traces/
 !/packages/trace/fixtures/*.trace.json
 !/public/samples/*.trace.json
+
+# Benchmark synthetic traces (large); keep timing JSON
+/benchmarks/results/*.trace.json
