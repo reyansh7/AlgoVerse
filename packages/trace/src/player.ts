@@ -1,5 +1,6 @@
 /**
  * Pure TracePlayer — seek/step only. Hosts own play/pause clocks.
+ * Zero React. Zero browser APIs.
  */
 
 import { reduceTrace } from "./reduce";
@@ -25,20 +26,32 @@ export class TracePlayer {
     return this._frames;
   }
 
+  /** Number of frames after reduce (one per event). */
   get length(): number {
     return this._frames.length;
   }
 
+  /** Current frame index (0-based). */
   get index(): number {
     return this._index;
   }
 
+  /** Frame at the current index, or null if empty. */
   get current(): Frame | null {
     if (this._frames.length === 0) return null;
     return this._frames[this._index] ?? null;
   }
 
-  get previous(): Frame | null {
+  /** Alias for {@link current} — public TracePlayer contract. */
+  get currentFrame(): Frame | null {
+    return this.current;
+  }
+
+  /**
+   * Frame immediately before the current index (for diff animation).
+   * Navigation uses {@link previous}().
+   */
+  get previousFrame(): Frame | null {
     if (this._index <= 0) return null;
     return this._frames[this._index - 1] ?? null;
   }
@@ -51,6 +64,16 @@ export class TracePlayer {
     }
     this._index = Math.max(0, Math.min(i, this._frames.length - 1));
     return this._frames[this._index];
+  }
+
+  /** Advance one frame. No-ops at the end. */
+  next(): Frame | null {
+    return this.step(1);
+  }
+
+  /** Step back one frame. No-ops at the start. */
+  previous(): Frame | null {
+    return this.step(-1);
   }
 
   /** Step forward (+1) or backward (-1). */

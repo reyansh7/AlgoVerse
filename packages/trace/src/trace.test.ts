@@ -58,11 +58,11 @@ describe("@algoverse/trace", () => {
     assert.equal(player.length, doc.events.length);
     assert.equal(player.index, 0);
 
-    player.step(1);
+    player.next();
     assert.equal(player.index, 1);
     player.seek(player.length - 1);
-    assert.deepEqual(player.current?.structures.array, [1, 2, 4, 5]);
-    player.step(-1);
+    assert.deepEqual(player.currentFrame?.structures.array, [1, 2, 4, 5]);
+    player.previous();
     assert.equal(player.index, player.length - 2);
   });
 

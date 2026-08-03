@@ -2,9 +2,7 @@
 
 import { useEffect } from "react";
 import { usePlaybackStore } from "@/store/playback-store";
-
-/** Base duration per step at 1x — long enough for cell/node tweens to read. */
-const BASE_STEP_MS = 900;
+import { stepIntervalMs } from "@/core/scheduler";
 
 /**
  * Drives timeline playback with rAF so step advances stay smooth and
@@ -26,9 +24,8 @@ export function usePlaybackClock() {
       acc += now - last;
       last = now;
 
-      const stepMs = BASE_STEP_MS / usePlaybackStore.getState().speed;
+      const stepMs = stepIntervalMs(usePlaybackStore.getState().speed);
 
-      // Re-read state every iteration; the store object is replaced on each set()
       while (acc >= stepMs) {
         acc -= stepMs;
         const store = usePlaybackStore.getState();

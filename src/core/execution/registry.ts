@@ -1,3 +1,9 @@
+/**
+ * LEGACY Playground registry — snapshot adapters that emit ExecutionState[] directly.
+ *
+ * Do NOT add new adapters here. New algorithms should emit Trace v0.1 events
+ * (see packages/trace + sdk/python) or Learn ReferenceSolution EventRecorder paths.
+ */
 import type { AlgorithmAdapter } from "../types/execution";
 import { binarySearchAdapter } from "./adapters/binary-search";
 import { linearSearchAdapter } from "./adapters/linear-search";

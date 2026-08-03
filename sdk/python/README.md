@@ -168,3 +168,12 @@ Trace(
 | Variable | Purpose |
 |----------|---------|
 | `ALGOVERSE_TRACE_OUT` | Default write path (also set by the CLI) |
+
+## Tests
+
+From the repo root (with the package on `PYTHONPATH` or installed editable):
+
+```bash
+pip install -e sdk/python
+python -m unittest discover -s sdk/python/tests -v
+```

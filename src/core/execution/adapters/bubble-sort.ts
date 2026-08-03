@@ -2,6 +2,7 @@ import type { AlgorithmAdapter } from "../../types/execution";
 import { SnapshotBuilder } from "../snapshot";
 import { mark } from "@/lib/highlight-colors";
 
+/** @deprecated Prefer Trace v0.1 / Learn EventRecorder. Snapshot adapter for Playground only. */
 export interface ArrayInput {
   array: number[];
 }

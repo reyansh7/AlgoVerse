@@ -9,19 +9,21 @@ import { TreeRenderer } from "./tree/TreeRenderer";
 import { QueueStackRenderer } from "./queue/QueueRenderer";
 import { StackRenderer } from "./stack/StackRenderer";
 import { HashMapRenderer } from "./hashmap/HashMapRenderer";
-import { HeapRenderer } from "./heap/HeapRenderer";
-import { TrieRenderer } from "./trie/TrieRenderer";
 
 interface Props {
   state: ExecutionState | null;
   previous: ExecutionState | null;
 }
 
+/**
+ * Route by structure presence only.
+ * Never inspect language, algorithm id, or SDK — only ExecutionState.structures.
+ */
 export function StructureStage({ state, previous }: Props) {
   if (!state) {
     return (
       <div className="flex h-full items-center justify-center text-text-muted">
-        Run a test case to begin visualization
+        No execution state yet
       </div>
     );
   }
@@ -32,10 +34,6 @@ export function StructureStage({ state, previous }: Props) {
     return <GraphRenderer state={state} />;
   }
   if ("tree" in structures && structures.tree !== undefined) {
-    // Prefer dedicated trie renderer when hashmap of children isn't present
-    if (state.algorithm.includes("trie") || state.algorithm.includes("208")) {
-      return <TrieRenderer state={state} />;
-    }
     return <TreeRenderer state={state} />;
   }
   if (structures.linkedList) {
@@ -52,12 +50,6 @@ export function StructureStage({ state, previous }: Props) {
   }
   if (structures.hashmap && !structures.array) {
     return <HashMapRenderer state={state} />;
-  }
-  if (
-    structures.array &&
-    (state.algorithm.includes("heap") || state.algorithm.includes("215-heap"))
-  ) {
-    return <HeapRenderer state={state} previous={previous} />;
   }
   if (structures.array) {
     return (

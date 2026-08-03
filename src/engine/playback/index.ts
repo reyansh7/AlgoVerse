@@ -1,5 +1,7 @@
 /**
- * Playback is owned by the Zustand store for React integration.
- * Re-export for the engine boundary documented in the architecture plan.
+ * Playback lives in Zustand stores under `src/store`.
+ * Pure step math: `@/core/player` + `@/core/scheduler`.
+ *
+ * @deprecated Prefer `@/store/playback-store` (Learn) or `@/store/playerStore` (Trace).
  */
-export { usePlaybackStore } from "@/store/playback-store";
+export {};

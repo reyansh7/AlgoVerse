@@ -2,15 +2,22 @@
   "name": "algoverse",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "packages/*",
+    "cli"
+  ],
   "scripts": {
     "dev": "next dev",
     "dev:clean": "node scripts/clean-next.mjs && next dev",
     "clean": "node scripts/clean-next.mjs",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:trace": "npm run test -w @algoverse/trace",
+    "algoverse": "node cli/bin/algoverse.js"
   },
   "dependencies": {
+    "@algoverse/trace": "*",
     "@gsap/react": "^2.1.2",
     "@monaco-editor/react": "^4.7.0",
     "@react-three/drei": "^10.7.7",
@@ -38,6 +45,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
     "tailwindcss": "^4",
+    "tsx": "^4.19.0",
     "typescript": "^5"
   }
 }

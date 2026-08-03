@@ -9,6 +9,7 @@ import { gsap, useGSAP, ScrollTrigger } from "@/lib/gsap";
 const links = [
   { href: "/learn", label: "Learn" },
   { href: "/explore", label: "Explore" },
+  { href: "/trace", label: "Trace" },
   { href: "/compare", label: "Compare" },
 ];
 

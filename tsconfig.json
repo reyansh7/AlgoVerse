@@ -19,7 +19,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@algoverse/trace": ["./packages/trace/src/index.ts"]
     }
   },
   "include": [

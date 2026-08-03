@@ -1,0 +1,16 @@
+{
+  "name": "@algoverse/cli",
+  "version": "0.1.0",
+  "description": "AlgoVerse CLI — run instrumented Python and open the Trace Player",
+  "type": "module",
+  "bin": {
+    "algoverse": "./bin/algoverse.js"
+  },
+  "scripts": {
+    "algoverse": "node ./bin/algoverse.js"
+  },
+  "dependencies": {
+    "@algoverse/trace": "*"
+  },
+  "license": "MIT"
+}
