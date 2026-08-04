@@ -106,14 +106,14 @@ export function TreeRenderer({ state }: Props) {
 
   if (!tree) {
     return (
-      <div className="flex h-full min-h-[360px] items-center justify-center text-text-muted">
+      <div className="flex h-full min-h-0 items-center justify-center text-text-muted">
         Empty tree — the first insertion creates the root
       </div>
     );
   }
 
   return (
-    <div className="flex h-full min-h-[360px] w-full items-center justify-center p-4">
+    <div className="flex h-full min-h-0 w-full items-center justify-center p-4">
       <svg
         ref={svgRef}
         viewBox={`0 0 ${VB_W} ${VB_H}`}

@@ -13,9 +13,10 @@ Your Python  →  algoverse.Trace  →  *.trace.json  →  @algoverse/trace  →
 ```
 
 - **Manual `Trace`:** fully supported, primary precise API  
-- **`InstrumentationSession`:** Milestone 1 — control-flow (`call` / `return` / `line` / `assign`)  
+- **`InstrumentationSession`:** Milestone 1 — control-flow  
 - **`TraceArray`:** Milestone 2 — structure bootstrap + `swap` / `assign`  
-- **Not yet:** `@visualize`, compare inference, AST/bytecode rewriting  
+- **`@visualize`:** Milestone 3 — public auto API composing the above  
+- **Not yet:** best-effort `compare` inference, AST/bytecode rewriting  
 
 ---
 
@@ -104,7 +105,7 @@ All event methods return `self` for chaining. Optional kwargs on every event:
 | `highlight(indices=…, kinds=…, sorted=…, clear=…)` | `highlight` | optional fields |
 
 Public exports: `Trace`, `TraceError`, `InstrumentationSession`, `TraceArray`,
-`TraceStructure`, `__version__`.
+`TraceStructure`, `visualize`, `VisualizedFunction`, `__version__`.
 
 `return_` is named that way because `return` is a Python keyword.
 
@@ -192,6 +193,51 @@ Session local-diffs skip any object whose type sets `_algoverse_structure`.
 
 Example: [`examples/bubble_trace_array.py`](../../examples/bubble_trace_array.py).
 
+### Array Plugin Core (v0.3)
+
+`TraceArray` lives under `algoverse.instrument.structures` and supports the ops
+needed for the six-sort suite (index ±, slice, append/extend/insert/pop,
+swap, best-effort compare). It is **not** a full Python `list` clone.
+
+Six-sort example: [`examples/array_plugin/sorts.py`](../../examples/array_plugin/sorts.py).
+Next structure plugin: Tree (not more Array edge cases).
+
+---
+
+## `@visualize` (Milestone 3)
+
+Public automatic API — composes Session + TraceArray + Trace write:
+
+```python
+from algoverse import visualize
+
+@visualize
+def bubble_sort(arr):
+    n = len(arr)
+    for i in range(n - 1):
+        for j in range(n - i - 1):
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    return arr
+
+bubble_sort([5, 4, 3, 2])  # writes bubble_sort.trace.json
+# bubble_sort.last_trace / .last_path available after the call
+```
+
+| Option | Default | Meaning |
+|--------|---------|---------|
+| `algorithm` | `fn.__name__` | Trace document id |
+| `out` | env / `{algorithm}.trace.json` | Write path |
+| `write` | `True` | Write `.trace.json` after success |
+| `open_player` | `False` | Best-effort open Trace Player (also `ALGOVERSE_OPEN_PLAYER=1`) |
+| `track` | first list-like arg | Parameter name (`str`) or bind index (`int`) |
+| `name` | `"array"` | TraceArray variable name for `assign` |
+| `sync_assign` | `True` | Forwarded to TraceArray |
+
+On failure: instrumentation stops cleanly; **no** file write / player open; the original exception is re-raised. Manual `Trace` is unchanged.
+
+Example: [`examples/bubble_visualize.py`](../../examples/bubble_visualize.py).
+
 ---
 
 ## Export
@@ -246,6 +292,8 @@ Trace(
 | Variable | Purpose |
 |----------|---------|
 | `ALGOVERSE_TRACE_OUT` | Default write path (also set by the CLI) |
+| `ALGOVERSE_OPEN_PLAYER` | If `1`/`true`, `@visualize` opens the Trace Player after write |
+| `ALGOVERSE_PLAYER_URL` | Player base URL (default `http://localhost:3000/trace`) |
 
 ## Tests
 

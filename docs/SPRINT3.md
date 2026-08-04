@@ -12,9 +12,8 @@ Manual `Trace` remains supported forever. Auto-instrumentation is an additional 
 |-----------|-------------|--------|
 | 1 | `InstrumentationSession` (`sys.settrace` → `call` / `return` / `line` / `assign`) | **Done** |
 | 2 | `TraceArray` (list proxy → structure bootstrap / swap / assign) | **Done** |
-| 3 | settrace polish + best-effort compare | Next |
-| 4 | `@visualize` public API | Planned |
-| 5 | Examples, docs, hardening | Planned |
+| 3 | `@visualize` public API (+ optional player launch) | **Done** |
+| — | Sprint 3 complete → v0.3 Array Plugin | See [`ARRAY_PLUGIN.md`](./ARRAY_PLUGIN.md) |
 
 Naming note: plan text historically said `TrackedArray`; implementation uses **`TraceArray`**.
 
@@ -207,25 +206,26 @@ Options (proposed):
 | **Risks** | False positives/negatives — keep heuristics conservative; prefer missing compare over wrong swap. |
 | **Tests** | Golden-ish bubble under auto mode vs manual fixture shape (not byte-identical; same event types present). |
 
-### Task 5 — `@visualize` / `visualize()` public API
+### Task 5 — `@visualize` / `visualize()` public API ✅
 
 | Field | Detail |
 |-------|--------|
 | **Goal** | Wire TraceArray + InstrumentationSession + Trace write into one decorator. |
-| **Files** | `sdk/python/algoverse/instrument/visualize.py`, `algoverse/__init__.py`, README |
+| **Files** | `sdk/python/algoverse/instrument/visualize.py`, `launch.py`, exports, `tests/test_visualize.py`, `examples/bubble_visualize.py` |
 | **Acceptance** | Example `@visualize def bubble_sort(arr): ...` writes valid `.trace.json` with `metadata.initial.array`; return value preserved; works with `ALGOVERSE_TRACE_OUT`. |
 | **Risks** | Arg binding (defaults, kwargs) — use `inspect.signature`. |
 | **Tests** | End-to-end decorator test; ensure manual `Trace` still exported and tested. |
+| **Shipped** | Milestone 3 — `@visualize` / `@visualize(...)`, track by name/index, write/open_player opts, env flags, `last_trace` / `last_path`. |
 
-### Task 6 — Player launch hook (optional path)
+### Task 6 — Player launch hook (optional path) ✅ (best-effort)
 
 | Field | Detail |
 |-------|--------|
-| **Goal** | After write, optionally open Trace Player without changing frontend (reuse CLI serve logic or document `algoverse run` / print path). |
-| **Files** | `visualize.py`, maybe thin `sdk/python/algoverse/instrument/launch.py`, `cli` docs only if needed |
-| **Acceptance** | `open_player=True` or env `ALGOVERSE_OPEN_PLAYER=1` triggers browser open **or** clear instructions; no React changes. Prefer calling existing CLI helper via subprocess only if clean; else write file + print URL. |
-| **Risks** | Coupling Python SDK to Node CLI — prefer “write + print tip” first; subprocess second. |
+| **Goal** | After write, optionally open Trace Player without changing frontend. |
+| **Files** | `sdk/python/algoverse/instrument/launch.py` |
+| **Acceptance** | `open_player=True` or env `ALGOVERSE_OPEN_PLAYER=1` stages under `public/traces/` when repo detected and opens browser; else prints tip. No React/CLI changes. |
 | **Tests** | Mock launch; assert write still happens if launch fails. |
+| **Shipped** | Python-side copy + `webbrowser.open`. |
 
 ### Task 7 — Examples + docs
 
@@ -251,11 +251,9 @@ Options (proposed):
 
 ## Implementation order
 
-**Shipped:** Task 3 / Milestone 1 — `InstrumentationSession`; Task 2 / Milestone 2 — `TraceArray`.
+**Shipped:** Milestone 1 (`InstrumentationSession`), Milestone 2 (`TraceArray`), Milestone 3 (`@visualize` + optional player launch).
 
-Remaining: 5 (`@visualize` minimum path) → 4 (compare quality) → 6 → 7 → 8  
-
-Ship a usable `@visualize` after Task 5 even if compare is sparse; improve compare in Task 4 without format changes.
+Remaining: 4 (compare quality) → 7 (docs polish) → 8 (hardening / Sprint 3 closure)
 
 ---
 

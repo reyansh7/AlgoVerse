@@ -9,20 +9,28 @@
 - Sprint 2 polish: SDK fail-fast, CLI UX, Player loading/upload, docs, hygiene  
   (see [`docs/SPRINT2.md`](./SPRINT2.md))
 
-## v0.2 — deferred
+## v0.2 — shipped (Sprint 3 auto-instrumentation)
 
-- Recursion tree panel
-- Stack frames / memory view
-- Tree + graph Trace path (reuse existing renderers)
+- `InstrumentationSession`, `TraceArray`, `@visualize`
+- Hybrid auto path; Trace v0.1 unchanged  
+  (see [`docs/SPRINT3.md`](./SPRINT3.md))
 
-## v0.3 — deferred
+## v0.3 — Array Plugin Core (current)
 
-- Export GIF / MP4
-- Shareable `.trace` files / compact binary
+- Perfect **observable arrays** for the six-sort teaching suite (not full `list` API)
+- Layout: `sdk/python/algoverse/instrument/structures/`
+- Roadmap: [`docs/ARRAY_PLUGIN.md`](./ARRAY_PLUGIN.md)
+- **Next:** Tree Plugin (`TraceTree`) — do not expand Array Recommended/Advanced first
 
 ## v0.4 — deferred
 
-- Plugin API
+- Recursion tree panel / stack frames (Player chrome)
+- Export GIF / MP4
+- Array Recommended backlog (only if needed after Tree)
+
+## v0.5 — deferred
+
+- Trace v0.2 structure-write events (if approved)
 - Custom events + custom renderers
 
 ## v1.0 — deferred
@@ -38,4 +46,6 @@
 - GitHub Action
 - AI explanation engine
 
-Do not start v0.2+ work until Trace v0.1 is stable with external contributors.
+Do not expand Array edge-case coverage before shipping the Tree Plugin.
+
+

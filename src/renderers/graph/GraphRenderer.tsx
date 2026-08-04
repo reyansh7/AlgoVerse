@@ -109,7 +109,7 @@ export function GraphRenderer({ state }: Props) {
 
   if (!graph || !layout) {
     return (
-      <div className="flex h-full min-h-[360px] items-center justify-center text-text-muted">
+      <div className="flex h-full min-h-0 items-center justify-center text-text-muted">
         No graph in current state
       </div>
     );
@@ -118,7 +118,7 @@ export function GraphRenderer({ state }: Props) {
   const { sx, sy } = layout;
 
   return (
-    <div className="relative flex h-full min-h-[360px] w-full flex-col">
+    <div className="relative flex h-full min-h-0 w-full flex-col">
       <div className="flex flex-1 items-center justify-center p-4">
         <svg
           ref={svgRef}

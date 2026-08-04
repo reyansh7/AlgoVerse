@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import {
   Pause,
   Play,
@@ -11,10 +11,28 @@ import {
   ChevronsRight,
 } from "lucide-react";
 import { usePlayerStore } from "@/store/playerStore";
+import { useTraceStore } from "@/store/traceStore";
 import { useTracePlaybackClock } from "@/hooks/useTracePlaybackClock";
 import { cn } from "@/lib/cn";
 
-const SPEEDS = [0.5, 0.75, 1, 1.5, 2, 3];
+/** Professional visualizer speeds — ∞ is a fast scrub through steps. */
+const SPEEDS: { value: number; label: string }[] = [
+  { value: 0.25, label: "0.25×" },
+  { value: 0.5, label: "0.5×" },
+  { value: 1, label: "1×" },
+  { value: 2, label: "2×" },
+  { value: 4, label: "4×" },
+  { value: 16, label: "∞" },
+];
+
+const MARKER_COLOR: Record<string, string> = {
+  compare: "#60a5fa",
+  swap: "#f87171",
+  assign: "#f0b429",
+  call: "#2ee6a6",
+  return: "#3ecbff",
+  highlight: "#c084fc",
+};
 
 /** Playback chrome bound to the Trace playerStore (not Learn playback-store). */
 export function TracePlaybackControls() {
@@ -33,9 +51,18 @@ export function TracePlaybackControls() {
   const jump = usePlayerStore((s) => s.jump);
   const setSpeed = usePlayerStore((s) => s.setSpeed);
 
+  const events = useTraceStore((s) => s.document?.events);
+
   const total = frames.length;
   const max = Math.max(0, total - 1);
   const empty = total === 0;
+
+  const markers = useMemo(() => {
+    if (!events?.length || total === 0) return [];
+    return events
+      .map((e, i) => ({ i, type: e.type, color: MARKER_COLOR[e.type] }))
+      .filter((m) => m.color);
+  }, [events, total]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -127,42 +154,64 @@ export function TracePlaybackControls() {
         </div>
 
         <div className="font-mono text-xs text-text-muted">
-          {empty ? "—" : `${currentStep + 1} / ${total}`}
+          {empty ? "—" : `Step ${currentStep + 1} / ${total}`}
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center justify-end gap-1">
           {SPEEDS.map((s) => (
             <button
-              key={s}
+              key={s.value}
               type="button"
-              onClick={() => setSpeed(s)}
+              onClick={() => setSpeed(s.value)}
               disabled={empty}
-              aria-pressed={speed === s}
+              aria-pressed={speed === s.value}
               className={cn(
                 "rounded-md px-2 py-1 font-mono text-[10px] transition disabled:opacity-30",
-                speed === s
+                speed === s.value
                   ? "bg-accent/20 text-accent"
                   : "text-text-muted hover:text-text-primary",
               )}
             >
-              {s}x
+              {s.label}
             </button>
           ))}
         </div>
       </div>
 
-      <input
-        type="range"
-        min={0}
-        max={max}
-        value={Math.min(currentStep, max)}
-        onChange={(e) => jump(Number(e.target.value))}
-        disabled={empty}
-        className="w-full accent-accent"
-        aria-label="Timeline"
-      />
+      <div className="relative pt-2">
+        {/* Event-type chapter ticks — compare / swap / call stand out */}
+        {!empty && markers.length > 0 && (
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 h-2"
+            aria-hidden
+          >
+            {markers.map((m) => (
+              <span
+                key={`${m.type}-${m.i}`}
+                className="absolute top-0 h-2 w-px opacity-80"
+                style={{
+                  left: `${max === 0 ? 0 : (m.i / max) * 100}%`,
+                  backgroundColor: m.color,
+                }}
+                title={m.type}
+              />
+            ))}
+          </div>
+        )}
+        <input
+          type="range"
+          min={0}
+          max={max}
+          value={Math.min(currentStep, max)}
+          onChange={(e) => jump(Number(e.target.value))}
+          disabled={empty}
+          className="relative z-[1] w-full accent-accent"
+          aria-label="Timeline"
+        />
+      </div>
       <p className="text-[10px] text-text-muted">
-        Shortcuts: Space play/pause · ← → step
+        Timeline ticks: compare · swap · assign · call · return · highlight ·
+        Shortcuts: Space · ← →
       </p>
     </div>
   );

@@ -1,8 +1,7 @@
 """
 InstrumentationSession — owns a Trace and a scoped sys.settrace hook.
 
-Milestone 1 of Sprint 3 auto-instrumentation.
-Does not wrap arrays (TraceArray) or provide @visualize yet.
+Registers structure plugins (e.g. TraceArray) for line stamping and flush-on-stop.
 """
 
 from __future__ import annotations
@@ -16,7 +15,6 @@ from algoverse.recorder import Trace, TraceError
 
 R = TypeVar("R")
 
-# Locals we never emit as assign events.
 _SKIP_LOCAL_NAMES = frozenset(
     {
         "__builtins__",
@@ -42,15 +40,10 @@ def _is_jsonish(value: Any) -> bool:
 
 
 def _is_structure_proxy(value: Any) -> bool:
-    """True for TraceArray / future TraceStructure wrappers (own their emits)."""
     return bool(getattr(type(value), "_algoverse_structure", False))
 
 
 def _snapshot_locals(frame: types.FrameType) -> dict[str, Any]:
-    """Deep-copy JSON-friendly locals so in-place list/dict edits diff correctly.
-
-    Structure proxies are omitted — they emit via TraceArray, not local diffs.
-    """
     out: dict[str, Any] = {}
     for name, value in frame.f_locals.items():
         if name in _SKIP_LOCAL_NAMES or name.startswith("__"):
@@ -63,18 +56,7 @@ def _snapshot_locals(frame: types.FrameType) -> dict[str, Any]:
 
 
 class InstrumentationSession:
-    """Scoped automatic emitter that writes into an existing :class:`Trace`.
-
-    Responsibilities (this milestone):
-
-    - Own / accept a :class:`Trace` document builder.
-    - Install and always restore ``sys.settrace``.
-    - Emit ``call``, ``return``, ``line``, and JSON-friendly ``assign`` events
-      for a single target function invocation via :meth:`run`.
-
-    Structure proxies (:class:`~algoverse.instrument.trace_array.TraceArray`) are
-    skipped in local diffs — they emit their own events.
-    """
+    """Scoped automatic emitter that writes into an existing :class:`Trace`."""
 
     def __init__(
         self,
@@ -110,18 +92,24 @@ class InstrumentationSession:
         self._prev_trace: Optional[Callable[..., Any]] = None
         self._target_code: Optional[types.CodeType] = None
         self._locals_by_frame: dict[int, dict[str, Any]] = {}
+        self._structures: list[Any] = []
 
     @property
     def trace(self) -> Trace:
-        """The Trace document builder owned or adopted by this session."""
         return self._trace
 
     @property
     def active(self) -> bool:
         return self._active
 
+    def register_structure(self, structure: Any) -> None:
+        """Register a TraceStructure for line stamps and flush-on-stop."""
+        if structure is None:
+            return
+        if structure not in self._structures:
+            self._structures.append(structure)
+
     def start(self, target: Callable[..., Any]) -> None:
-        """Begin tracing ``target``'s code object. Prefer :meth:`run`."""
         if self._active:
             raise TraceError("InstrumentationSession is already active")
         if not callable(target) or not hasattr(target, "__code__"):
@@ -134,9 +122,12 @@ class InstrumentationSession:
         sys.settrace(self._on_trace)
 
     def stop(self) -> None:
-        """Restore the previous ``sys.settrace`` hook (idempotent)."""
         if not self._active:
             return
+        for s in self._structures:
+            flush = getattr(s, "flush", None)
+            if callable(flush):
+                flush()
         sys.settrace(self._prev_trace)
         self._prev_trace = None
         self._target_code = None
@@ -144,10 +135,6 @@ class InstrumentationSession:
         self._active = False
 
     def run(self, fn: Callable[..., R], /, *args: Any, **kwargs: Any) -> R:
-        """Run ``fn`` under this session and return its result.
-
-        Always restores the previous tracer, including when ``fn`` raises.
-        """
         self.start(fn)
         try:
             return fn(*args, **kwargs)
@@ -155,12 +142,16 @@ class InstrumentationSession:
             self.stop()
 
     def __enter__(self) -> "InstrumentationSession":
-        """Return self; call :meth:`run` inside the block. Guarantees :meth:`stop`."""
         return self
 
     def __exit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
         self.stop()
         return None
+
+    def _stamp_structures(self, lineno: int) -> None:
+        for s in self._structures:
+            if hasattr(s, "line"):
+                s.line = lineno
 
     def _is_target_frame(self, frame: types.FrameType) -> bool:
         return self._target_code is not None and frame.f_code is self._target_code
@@ -177,6 +168,7 @@ class InstrumentationSession:
         if event == "call":
             if frame.f_code is self._target_code:
                 self._emit_call(frame)
+                self._stamp_structures(frame.f_lineno)
                 self._locals_by_frame[id(frame)] = _snapshot_locals(frame)
                 return self._on_trace
             return None
@@ -185,11 +177,13 @@ class InstrumentationSession:
             return None
 
         if event == "line":
+            self._stamp_structures(frame.f_lineno)
             self._trace.line(frame.f_lineno)
             self._emit_assign_diffs(frame)
             return self._on_trace
 
         if event == "return":
+            self._stamp_structures(frame.f_lineno)
             self._emit_assign_diffs(frame)
             value = arg if _is_jsonish(arg) else None
             kwargs: dict[str, Any] = {"line": frame.f_lineno}

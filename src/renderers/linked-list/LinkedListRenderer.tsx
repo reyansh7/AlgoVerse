@@ -118,7 +118,7 @@ export function LinkedListRenderer({ state }: Props) {
 
   if (!list) {
     return (
-      <div className="flex h-full min-h-[320px] items-center justify-center text-text-muted">
+      <div className="flex h-full min-h-0 items-center justify-center text-text-muted">
         No linked list in current state
       </div>
     );
@@ -127,7 +127,7 @@ export function LinkedListRenderer({ state }: Props) {
   const trackWidth = Math.max(ordered.length * SLOT, 120);
 
   return (
-    <div className="flex h-full min-h-[320px] w-full items-center justify-center overflow-x-auto px-8">
+    <div className="flex h-full min-h-0 w-full items-center justify-center overflow-x-auto px-8">
       <div className="relative shrink-0" style={{ width: trackWidth, height: 170 }}>
         <span className="absolute left-0 top-[86px] -translate-x-full pr-3 font-mono text-xs text-accent-2">
           head

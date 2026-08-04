@@ -81,5 +81,6 @@ export function frameToExecutionState(frame: Frame | null): ExecutionState | nul
     },
     operation: frame.operation,
     description: frame.description,
+    callStack: frame.callStack ? [...frame.callStack] : [],
   };
 }

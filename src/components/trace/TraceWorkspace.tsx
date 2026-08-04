@@ -52,6 +52,7 @@ export function TraceWorkspace() {
   const currentStep = usePlayerStore((s) => s.currentStep);
   const loadPlayer = usePlayerStore((s) => s.load);
   const jump = usePlayerStore((s) => s.jump);
+  const speed = usePlayerStore((s) => s.speed);
 
   const selectEvent = useSelectionStore((s) => s.selectEvent);
   const selectedEventIndex = useSelectionStore((s) => s.selectedEventIndex);
@@ -158,16 +159,16 @@ export function TraceWorkspace() {
   };
 
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-7xl flex-col gap-4 px-5 pb-10 pt-24">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
+    <div className="mx-auto flex h-full w-full max-w-7xl flex-col gap-3 overflow-hidden px-5 pb-3 pt-20">
+      <header className="flex shrink-0 flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0">
           <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-accent">
             Trace player · v0.1
           </p>
-          <h1 className="mt-2 font-display text-2xl font-semibold tracking-tight sm:text-3xl">
+          <h1 className="mt-1 truncate font-display text-xl font-semibold tracking-tight sm:text-2xl">
             {document?.algorithm ?? "Load a trace"}
           </h1>
-          <p className="mt-1 text-sm text-text-muted">
+          <p className="mt-0.5 truncate text-xs text-text-muted">
             {sourceLabel
               ? `${sourceLabel} · ${document?.language ?? ""}`
               : "Upload a .trace.json or try the bubble sort sample."}
@@ -177,7 +178,7 @@ export function TraceWorkspace() {
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm transition hover:border-white/20 hover:bg-white/[0.06]"
+            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-sm transition hover:border-white/20 hover:bg-white/[0.06]"
           >
             <Upload className="h-4 w-4" />
             Upload
@@ -194,13 +195,13 @@ export function TraceWorkspace() {
                 setLoading(false);
               }
             }}
-            className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-bg-deep transition hover:brightness-110"
+            className="rounded-xl bg-accent px-3 py-1.5 text-sm font-semibold text-bg-deep transition hover:brightness-110"
           >
             Load sample
           </button>
           <Link
             href="/learn/bubble-sort"
-            className="rounded-xl px-3 py-2 text-sm text-text-muted transition hover:text-text-primary"
+            className="rounded-xl px-2 py-1.5 text-sm text-text-muted transition hover:text-text-primary"
           >
             Learn bubble sort →
           </Link>
@@ -222,7 +223,7 @@ export function TraceWorkspace() {
         <div
           role="alert"
           aria-live="assertive"
-          className="flex items-start justify-between gap-3 rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger"
+          className="flex shrink-0 items-start justify-between gap-3 rounded-xl border border-danger/30 bg-danger/10 px-4 py-2 text-sm text-danger"
         >
           <span>{error}</span>
           <button
@@ -236,11 +237,12 @@ export function TraceWorkspace() {
         </div>
       )}
 
-      <div className="grid flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="flex min-h-0 flex-col gap-4">
+      {/* Single-page workspace: stage + sidebar; lists scroll inside panels */}
+      <div className="grid min-h-0 flex-1 gap-3 overflow-hidden lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden">
           <div
             className={cn(
-              "glass relative flex min-h-[340px] flex-1 flex-col overflow-hidden rounded-2xl p-4 md:min-h-[400px]",
+              "glass relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl p-3",
               dragOver && "ring-2 ring-accent/50",
             )}
             onDragOver={(e) => {
@@ -268,22 +270,49 @@ export function TraceWorkspace() {
                 </p>
               </div>
             ) : (
-              <StructureStage state={state} previous={previous} />
+              <>
+                <div className="pointer-events-none absolute left-3 right-3 top-3 z-10 flex flex-wrap items-start justify-between gap-2">
+                  <div className="max-w-xl rounded-xl border border-white/10 bg-bg-deep/80 px-3 py-2 shadow-lg backdrop-blur-md">
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-md bg-accent/20 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-accent">
+                        {state.operation || "step"}
+                      </span>
+                      <span className="font-mono text-[10px] text-text-muted">
+                        step {state.step}
+                        {state.line > 0 ? ` · L${state.line}` : ""}
+                      </span>
+                    </div>
+                    {state.description ? (
+                      <p className="mt-1 line-clamp-2 text-sm leading-snug text-text-primary/95">
+                        {state.description}
+                      </p>
+                    ) : (
+                      <p className="mt-1 text-sm text-text-muted">
+                        Watch what moves — only meaningful changes animate.
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="min-h-0 flex-1 overflow-auto">
+                  <StructureStage
+                    state={state}
+                    previous={previous}
+                    speed={speed}
+                  />
+                </div>
+              </>
             )}
           </div>
-          {state?.description && (
-            <p className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 text-sm leading-relaxed text-text-primary/90">
-              {state.description}
-            </p>
-          )}
-          <TracePlaybackControls />
+          <div className="shrink-0">
+            <TracePlaybackControls />
+          </div>
         </div>
 
-        <div className="flex min-h-0 flex-col gap-4">
-          <div className="h-[180px] shrink-0">
-            <VariablesPanel state={state} />
+        <aside className="flex min-h-0 flex-col gap-3 overflow-hidden">
+          <div className="min-h-0 basis-[28%] overflow-hidden">
+            <VariablesPanel state={state} previous={previous} />
           </div>
-          <div className="h-[200px] shrink-0">
+          <div className="min-h-0 basis-[28%] overflow-hidden">
             {codeLines.length > 0 ? (
               <CodePanel
                 title="Source"
@@ -295,35 +324,35 @@ export function TraceWorkspace() {
             ) : (
               <div className="glass flex h-full items-center justify-center rounded-2xl px-4 text-center text-sm text-text-muted">
                 No source in this trace — pass{" "}
-                <code className="mx-1 text-accent">source_code=</code> to{" "}
-                <code className="text-accent">Trace(...)</code> in the SDK.
+                <code className="mx-1 text-accent">source_code=</code> when
+                emitting.
               </div>
             )}
           </div>
-          <div className="min-h-[220px] flex-1">
+          <div className="min-h-0 flex-1 basis-[44%] overflow-hidden">
             <EventLog
               events={document?.events ?? []}
               activeIndex={currentStep}
             />
           </div>
-        </div>
+        </aside>
       </div>
 
-      <details className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-        <summary className="cursor-pointer text-sm text-text-muted">
+      <details className="shrink-0 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-1.5">
+        <summary className="cursor-pointer text-xs text-text-muted">
           Paste trace JSON
         </summary>
         <textarea
           value={paste}
           onChange={(e) => setPaste(e.target.value)}
-          rows={8}
-          className="mt-3 w-full rounded-xl border border-white/10 bg-black/30 p-3 font-mono text-xs text-text-primary outline-none focus:border-accent/40"
-          placeholder='{ "version": "0.1", "language": "python", "algorithm": "…", "metadata": { "initial": { "array": [5, 1, 4, 2] } }, "events": [] }'
+          rows={4}
+          className="mt-2 max-h-28 w-full rounded-xl border border-white/10 bg-black/30 p-2 font-mono text-xs text-text-primary outline-none focus:border-accent/40"
+          placeholder='{ "version": "0.1", … }'
         />
         <button
           type="button"
           onClick={() => applyJson(paste, "pasted")}
-          className="mt-2 rounded-lg bg-accent/20 px-3 py-1.5 text-sm text-accent transition hover:bg-accent/30"
+          className="mt-2 rounded-lg bg-accent/20 px-3 py-1 text-xs text-accent transition hover:bg-accent/30"
         >
           Parse & load
         </button>

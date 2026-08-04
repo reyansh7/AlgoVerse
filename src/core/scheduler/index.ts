@@ -9,8 +9,10 @@ export const BASE_STEP_MS = 900;
 
 /** Duration for one step at the given speed multiplier. */
 export function stepIntervalMs(speed: number): number {
-  const s = Number.isFinite(speed) && speed > 0 ? speed : 1;
-  return BASE_STEP_MS / s;
+  if (!Number.isFinite(speed) || speed <= 0) return BASE_STEP_MS;
+  // Cap so ∞ (16×) still yields a tiny interval without spinning the CPU.
+  const s = Math.min(speed, 32);
+  return Math.max(16, BASE_STEP_MS / s);
 }
 
 /** Clamp a frame index into [0, length-1]. */

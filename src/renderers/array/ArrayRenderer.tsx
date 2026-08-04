@@ -5,20 +5,35 @@ import { gsap } from "@/lib/gsap";
 import type { ExecutionState } from "@/core/types/execution";
 import { diffStates } from "@/core/animation/diff";
 import { barColor, HIGHLIGHT_COLORS } from "@/lib/highlight-colors";
+import { BASE_STEP_MS } from "@/core/scheduler";
 
 interface Props {
   state: ExecutionState | null;
   previous: ExecutionState | null;
+  /** Playback speed — keeps tweens inside the step interval. */
+  speed?: number;
 }
 
 const GAP = 6;
 const TRACK_H = 260;
 
-export function ArrayRenderer({ state, previous }: Props) {
+function prefersReducedMotion(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+/** Keep tweens inside the playback step budget so motion finishes before the next event. */
+function stepBudgetSec(speed: number): number {
+  const s = Math.max(0.25, Math.min(speed, 32));
+  return (BASE_STEP_MS / s / 1000) * 0.72;
+}
+
+export function ArrayRenderer({ state, previous, speed = 1 }: Props) {
   const trackRef = useRef<HTMLDivElement>(null);
   const cellRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const pointerRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const mounted = useRef(false);
+  const lastStep = useRef<number | null>(null);
 
   const array = useMemo(
     () => (state?.structures.array ?? []) as (number | string)[],
@@ -97,6 +112,19 @@ export function ArrayRenderer({ state, previous }: Props) {
     const first = !mounted.current;
     mounted.current = true;
 
+    const reduced = prefersReducedMotion();
+    const jumpScrub =
+      lastStep.current !== null && Math.abs(step - lastStep.current) > 1;
+    lastStep.current = step;
+
+    const instant = first || reduced || jumpScrub;
+    const budget = stepBudgetSec(speed);
+    const colorDur = instant ? 0 : Math.min(0.28, budget * 0.45);
+    const moveDur = instant ? 0 : Math.min(0.42, budget * 0.7);
+    const swapLift = instant ? 0 : Math.min(0.18, budget * 0.28);
+    const swapSlide = instant ? 0 : Math.min(0.36, budget * 0.55);
+    const pulseDur = instant ? 0 : Math.min(0.16, budget * 0.22);
+
     for (const [index, el] of cellRefs.current) {
       if (index >= n) continue;
       const targetX = index * slot;
@@ -110,7 +138,7 @@ export function ArrayRenderer({ state, previous }: Props) {
           height: targetH,
           backgroundColor: color,
           opacity: active ? 1 : 0.55,
-          duration: first ? 0 : 0.35,
+          duration: colorDur,
           ease: "power2.out",
           overwrite: "auto",
         });
@@ -120,7 +148,7 @@ export function ArrayRenderer({ state, previous }: Props) {
       if (label) {
         gsap.to(label, {
           color,
-          duration: first ? 0 : 0.3,
+          duration: colorDur,
           overwrite: "auto",
         });
       }
@@ -131,40 +159,51 @@ export function ArrayRenderer({ state, previous }: Props) {
           color,
           backgroundColor: `${color}18`,
           borderBottomColor: kinds[index] ? `${color}66` : "transparent",
-          duration: first ? 0 : 0.3,
+          duration: colorDur,
           overwrite: "auto",
         });
       }
 
       const swap = diff?.swappedIndices;
-      const swapping = swap && (index === swap[0] || index === swap[1]);
+      const swapping = Boolean(swap && (index === swap[0] || index === swap[1]));
 
-      if (first) {
-        gsap.set(el, { x: targetX, y: 0, scale: 1 });
+      if (instant) {
+        gsap.killTweensOf(el);
+        gsap.set(el, { x: targetX, y: 0, scale: 1, zIndex: 1 });
         continue;
       }
 
-      if (swapping) {
+      if (swapping && swap) {
         const partner = index === swap[0] ? swap[1] : swap[0];
-        const lift = index === swap[0] ? -28 : 28;
+        // Arc: one lifts up, one dips — identity travels, never teleports.
+        const lift = index === swap[0] ? -32 : 32;
         gsap.killTweensOf(el);
         gsap
-          .timeline()
+          .timeline({ defaults: { overwrite: "auto" } })
           .set(el, { x: partner * slot, zIndex: 20 })
-          .to(el, { y: lift, duration: 0.2, ease: "power2.out" })
-          .to(el, { x: targetX, duration: 0.34, ease: "power2.inOut" }, "<")
-          .to(el, { y: 0, duration: 0.2, ease: "power2.in" })
+          .to(el, { y: lift, duration: swapLift, ease: "power2.out" })
+          .to(
+            el,
+            { x: targetX, duration: swapSlide, ease: "power3.inOut" },
+            "<0.04",
+          )
+          .to(el, {
+            y: 0,
+            duration: swapLift,
+            ease: "back.out(1.6)",
+          })
           .set(el, { zIndex: 1 });
       } else {
         gsap.to(el, {
           x: targetX,
           y: 0,
-          duration: 0.38,
-          ease: "power3.inOut",
+          duration: moveDur,
+          ease: "power3.out",
           overwrite: "auto",
         });
       }
 
+      // Signature pulse for compare / focus ops — after highlight color settles.
       if (
         kinds[index] &&
         (operation === "compare" ||
@@ -177,12 +216,13 @@ export function ArrayRenderer({ state, previous }: Props) {
           el,
           { scale: 1 },
           {
-            scale: 1.08,
-            duration: 0.18,
+            scale: 1.1,
+            duration: pulseDur,
             yoyo: true,
             repeat: 1,
             ease: "power2.out",
             overwrite: false,
+            delay: colorDur * 0.35,
           },
         );
       }
@@ -195,8 +235,8 @@ export function ArrayRenderer({ state, previous }: Props) {
       gsap.to(el, {
         x: clamped * slot + cellW / 2,
         opacity: p.index === clamped ? 1 : 0.45,
-        duration: first ? 0 : 0.42,
-        ease: "back.out(1.5)",
+        duration: instant ? 0 : Math.min(0.4, budget * 0.65),
+        ease: instant ? "none" : "back.out(1.4)",
         overwrite: "auto",
       });
     }
@@ -214,19 +254,20 @@ export function ArrayRenderer({ state, previous }: Props) {
     slot,
     cellW,
     maxValue,
+    speed,
   ]);
 
   if (!array.length) {
     return (
-      <div className="flex h-full min-h-[320px] items-center justify-center text-text-muted">
+      <div className="flex h-full min-h-0 items-center justify-center text-text-muted">
         No array in current state
       </div>
     );
   }
 
   return (
-    <div className="flex h-full min-h-[360px] w-full flex-col items-center justify-center gap-4 overflow-x-auto px-6 py-5">
-      {/* legend */}
+    <div className="flex h-full min-h-0 w-full flex-col items-center justify-center gap-3 overflow-x-auto px-4 pb-4 pt-12">
+      {/* legend — fixed color language */}
       <div className="flex flex-wrap items-center justify-center gap-3 text-[10px] uppercase tracking-wider text-text-muted">
         <Legend swatch={HIGHLIGHT_COLORS.comparing} label="compare" />
         <Legend swatch={HIGHLIGHT_COLORS.swapped} label="swap" />

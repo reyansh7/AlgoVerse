@@ -25,6 +25,7 @@ export function Playground({ problem }: Props) {
   const ensureDefaults = useTestCaseStore((s) => s.ensureDefaults);
 
   const { state, previous, currentStep } = useExecutionView();
+  const speed = usePlaybackStore((s) => s.speed);
 
   const handleRun = useCallback(
     (input: unknown) => {
@@ -90,7 +91,7 @@ export function Playground({ problem }: Props) {
         <div className="flex min-h-[520px] flex-col gap-3">
           <div className="glass relative min-h-[400px] flex-1 overflow-hidden rounded-2xl">
             <div className="absolute inset-0">
-              <StructureStage state={state} previous={previous} />
+              <StructureStage state={state} previous={previous} speed={speed} />
             </div>
             {state && (
               <div className="pointer-events-none absolute left-4 top-4 z-10 rounded-lg border border-border-glass bg-black/45 px-3 py-1.5 font-mono text-[11px] text-accent backdrop-blur-md">
@@ -103,7 +104,7 @@ export function Playground({ problem }: Props) {
 
         <div className="grid min-h-[420px] grid-rows-2 gap-3">
           <CodePanel code={problem.code} activeLine={state?.line ?? null} />
-          <VariablesPanel state={state} />
+          <VariablesPanel state={state} previous={previous} />
         </div>
       </div>
     </div>

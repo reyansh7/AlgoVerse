@@ -51,7 +51,7 @@ export function DPTableRenderer({ state }: Props) {
 
   if (!table.length) {
     return (
-      <div className="flex h-full min-h-[320px] items-center justify-center text-text-muted">
+      <div className="flex h-full min-h-0 items-center justify-center text-text-muted">
         No DP table in current state
       </div>
     );
@@ -60,7 +60,7 @@ export function DPTableRenderer({ state }: Props) {
   return (
     <div
       ref={ref}
-      className="flex h-full min-h-[320px] flex-col items-center justify-center gap-4 overflow-auto p-6"
+      className="flex h-full min-h-0 flex-col items-center justify-center gap-4 overflow-auto p-6"
     >
       <div className="flex flex-wrap gap-3 text-[10px] uppercase tracking-wider text-text-muted">
         <span className="inline-flex items-center gap-1.5">

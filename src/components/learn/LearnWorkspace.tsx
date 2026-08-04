@@ -32,6 +32,7 @@ export function LearnWorkspace({ problem }: Props) {
   const timeline = usePlaybackStore((s) => s.timeline);
   const { state, previous, currentStep, totalSteps } = useExecutionView();
   usePlaybackClock();
+  const speed = usePlaybackStore((s) => s.speed);
 
   const [solutionId, setSolutionId] = useState(problem.solutions[0]?.id ?? "");
   const solution = useMemo(
@@ -132,7 +133,7 @@ export function LearnWorkspace({ problem }: Props) {
             </span>
           </div>
           <div className="min-h-0 flex-1 p-2">
-            <StructureStage state={state} previous={previous} />
+            <StructureStage state={state} previous={previous} speed={speed} />
           </div>
           <div className="border-t border-white/5 px-3 py-2">
             <div className="mb-2 rounded-xl border border-accent/20 bg-accent/5 px-3 py-2">
@@ -262,7 +263,7 @@ export function LearnWorkspace({ problem }: Props) {
           <div className="mb-2 text-[10px] uppercase tracking-[0.15em] text-text-muted">
             Variables · step {totalSteps ? currentStep + 1 : 0}/{totalSteps}
           </div>
-          <VariablesPanel state={state} />
+          <VariablesPanel state={state} previous={previous} />
         </div>
       </div>
     </div>

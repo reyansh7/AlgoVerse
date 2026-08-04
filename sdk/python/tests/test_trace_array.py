@@ -43,13 +43,14 @@ class TraceArrayInitTests(unittest.TestCase):
 
 
 class TraceArrayReadWriteTests(unittest.TestCase):
-    def test_reads_are_tracked_not_emitted(self) -> None:
+    def test_reads_are_tracked_and_may_emit_compare(self) -> None:
         tr, arr = TraceArray.tracked([10, 20, 30], algorithm="x")
         self.assertEqual(arr[1], 20)
         self.assertEqual(arr[0], 10)
         self.assertEqual(arr.last_reads, ((1, 20), (0, 10)))
         self.assertEqual(arr.read_count, 2)
-        self.assertEqual(_types(tr), [])
+        # Paired distinct reads emit best-effort compare (Array Plugin Core).
+        self.assertEqual(_types(tr), ["compare"])
 
     def test_single_write_emits_assign_on_flush(self) -> None:
         tr, arr = TraceArray.tracked([1, 2, 3], algorithm="x")
@@ -73,7 +74,7 @@ class TraceArrayReadWriteTests(unittest.TestCase):
             [1, 2], algorithm="x", sync_assign=False
         )
         arr[0], arr[1] = arr[1], arr[0]
-        self.assertEqual(_types(tr), ["swap"])
+        self.assertEqual(_types(tr), ["compare", "swap"])
         self.assertEqual(arr.to_list(), [2, 1])
 
 

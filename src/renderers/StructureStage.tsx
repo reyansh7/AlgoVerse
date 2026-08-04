@@ -13,13 +13,15 @@ import { HashMapRenderer } from "./hashmap/HashMapRenderer";
 interface Props {
   state: ExecutionState | null;
   previous: ExecutionState | null;
+  /** Playback speed multiplier — scales GSAP so motion finishes inside the step. */
+  speed?: number;
 }
 
 /**
  * Route by structure presence only.
  * Never inspect language, algorithm id, or SDK — only ExecutionState.structures.
  */
-export function StructureStage({ state, previous }: Props) {
+export function StructureStage({ state, previous, speed = 1 }: Props) {
   if (!state) {
     return (
       <div className="flex h-full items-center justify-center text-text-muted">
@@ -55,7 +57,7 @@ export function StructureStage({ state, previous }: Props) {
     return (
       <div className="flex h-full min-h-0 flex-col gap-3">
         <div className="min-h-0 flex-1">
-          <ArrayRenderer state={state} previous={previous} />
+          <ArrayRenderer state={state} previous={previous} speed={speed} />
         </div>
         {structures.hashmap ? (
           <div className="h-28 shrink-0">

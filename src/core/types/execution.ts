@@ -46,6 +46,8 @@ export interface ExecutionState {
   highlights: Highlights;
   operation: string;
   description: string;
+  /** Active call frames when present on the Trace Frame (debugger strip). */
+  callStack?: string[];
 }
 
 export interface Timeline {
