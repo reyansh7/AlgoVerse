@@ -1,9 +1,9 @@
 """
-Best-effort Trace Player open — no CLI/frontend changes.
+Legacy Trace Player helpers.
 
-Copies the written .trace.json under ``public/traces/`` when the AlgoVerse
-repo layout is detected, then opens the existing ``/trace?src=…`` URL.
-On any failure, prints a tip and returns False (never raises for UX paths).
+Preferred path: :mod:`algoverse.viewer` (embedded Visualization Service).
+This module remains for callers that still stage a file into a Next.js
+``public/traces/`` tree when developing the full web app.
 """
 
 from __future__ import annotations
@@ -12,7 +12,9 @@ import os
 import shutil
 import webbrowser
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
+
+from algoverse.viewer import try_open_viewer
 
 
 def _find_repo_root(start: Path) -> Optional[Path]:
@@ -27,9 +29,10 @@ def _find_repo_root(start: Path) -> Optional[Path]:
 
 
 def try_open_trace_player(trace_path: Path, *, port: int = 3000) -> bool:
-    """Open the Trace Player for ``trace_path`` if possible.
+    """Open a written ``.trace.json`` in the embedded viewer (preferred).
 
-    Honors ``ALGOVERSE_PLAYER_URL`` as the base (default ``http://localhost:<port>/trace``).
+    Falls back to copying into ``public/traces/`` + Next.js URL when
+    ``ALGOVERSE_PLAYER_URL`` points at an external app.
     """
     path = Path(trace_path).resolve()
     if not path.is_file():
@@ -39,7 +42,19 @@ def try_open_trace_player(trace_path: Path, *, port: int = 3000) -> bool:
         )
         return False
 
-    base = os.environ.get("ALGOVERSE_PLAYER_URL") or f"http://localhost:{port}/trace"
+    # Prefer embedded Visualization Service unless an external player URL is set.
+    external = os.environ.get("ALGOVERSE_PLAYER_URL")
+    if not external:
+        try:
+            import json
+
+            doc = json.loads(path.read_text(encoding="utf-8"))
+            viewer_port = int(os.environ.get("ALGOVERSE_VIEWER_PORT") or 3210)
+            return try_open_viewer(doc, port=viewer_port, open_browser=True)
+        except Exception as e:  # noqa: BLE001
+            print(f"[algoverse] tip: embedded viewer failed ({e})", flush=True)
+
+    base = external or f"http://localhost:{port}/trace"
     repo = _find_repo_root(Path.cwd()) or _find_repo_root(path.parent)
     dest_name = path.name if path.name.endswith(".json") else f"{path.name}.json"
 
@@ -51,7 +66,6 @@ def try_open_trace_player(trace_path: Path, *, port: int = 3000) -> bool:
             shutil.copy2(path, dest)
             url = f"{base}?src=/traces/{dest_name}"
             print(f"[algoverse] opening {url}", flush=True)
-            print(f"[algoverse] served file {dest}", flush=True)
             webbrowser.open(url)
             return True
         except OSError as e:
@@ -59,8 +73,12 @@ def try_open_trace_player(trace_path: Path, *, port: int = 3000) -> bool:
 
     print(
         f"[algoverse] tip: wrote {path}. "
-        f"Start the app (`npm run dev`) and open {base}, or run: "
-        f"npm run algoverse -- run <script.py>",
+        f"Re-run with the embedded viewer, or open {base}.",
         flush=True,
     )
     return False
+
+
+def try_open_trace_document(trace: dict[str, Any], *, port: int = 3210) -> bool:
+    """Push an in-memory TraceDocument to the Visualization Service."""
+    return try_open_viewer(trace, port=port, open_browser=True)

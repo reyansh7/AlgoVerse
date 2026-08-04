@@ -4,6 +4,7 @@ import { useLayoutEffect, useMemo, useRef } from "react";
 import { gsap } from "@/lib/gsap";
 import { cn } from "@/lib/cn";
 import type { ExecutionState } from "@/core/types/execution";
+import { MOTION, prefersReducedMotion } from "@/lib/visual-language";
 
 interface Props {
   state: ExecutionState | null;
@@ -45,6 +46,7 @@ export function LinkedListRenderer({ state }: Props) {
 
   useLayoutEffect(() => {
     if (step === undefined) return;
+    const reduced = prefersReducedMotion();
 
     ordered.forEach((node, index) => {
       const el = nodeRefs.current.get(node.id);
@@ -53,7 +55,10 @@ export function LinkedListRenderer({ state }: Props) {
       const isNew = !seen.current.has(node.id);
       seen.current.add(node.id);
 
-      if (isNew) {
+      if (reduced) {
+        gsap.killTweensOf(el);
+        gsap.set(el, { x: targetX, y: 0, opacity: 1, scale: 1 });
+      } else if (isNew) {
         gsap.killTweensOf(el);
         gsap.fromTo(
           el,
@@ -64,7 +69,7 @@ export function LinkedListRenderer({ state }: Props) {
             opacity: 1,
             scale: 1,
             duration: 0.5,
-            ease: "back.out(1.7)",
+            ease: MOTION.easeDefault,
           },
         );
       } else {
@@ -74,20 +79,27 @@ export function LinkedListRenderer({ state }: Props) {
           opacity: 1,
           scale: 1,
           duration: 0.45,
-          ease: "power3.inOut",
+          ease: MOTION.easeSwap,
           overwrite: "auto",
         });
       }
 
       const arrow = arrowRefs.current.get(node.id);
       if (arrow) {
-        gsap.to(arrow, {
-          x: targetX + NODE_W,
-          opacity: index < ordered.length - 1 ? 1 : 0,
-          duration: 0.45,
-          ease: "power3.inOut",
-          overwrite: "auto",
-        });
+        if (reduced) {
+          gsap.set(arrow, {
+            x: targetX + NODE_W,
+            opacity: index < ordered.length - 1 ? 1 : 0,
+          });
+        } else {
+          gsap.to(arrow, {
+            x: targetX + NODE_W,
+            opacity: index < ordered.length - 1 ? 1 : 0,
+            duration: 0.45,
+            ease: MOTION.easeSwap,
+            overwrite: "auto",
+          });
+        }
       }
     });
 
@@ -99,17 +111,24 @@ export function LinkedListRenderer({ state }: Props) {
 
     if (cursorRef.current) {
       if (cursorIndex >= 0) {
-        gsap.to(cursorRef.current, {
-          x: cursorIndex * SLOT + NODE_W / 2 - 14,
-          opacity: 1,
-          duration: 0.42,
-          ease: "back.out(1.8)",
-          overwrite: "auto",
-        });
+        if (reduced) {
+          gsap.set(cursorRef.current, {
+            x: cursorIndex * SLOT + NODE_W / 2 - 14,
+            opacity: 1,
+          });
+        } else {
+          gsap.to(cursorRef.current, {
+            x: cursorIndex * SLOT + NODE_W / 2 - 14,
+            opacity: 1,
+            duration: 0.42,
+            ease: MOTION.easeDefault,
+            overwrite: "auto",
+          });
+        }
       } else {
         gsap.to(cursorRef.current, {
           opacity: 0,
-          duration: 0.2,
+          duration: reduced ? 0 : 0.2,
           overwrite: "auto",
         });
       }

@@ -7,16 +7,17 @@ rewrite your code. Manual `Trace` methods and the additive auto layer both
 write the same portable `.trace.json`.
 
 ```text
-Your Python  →  algoverse.Trace  →  *.trace.json  →  @algoverse/trace  →  Player
-                 ↑
-        InstrumentationSession + TraceArray (optional auto emitters)
+@visualize
+  → InstrumentationSession → TraceArray → Trace → TraceDocument
+  → Visualization Service (embedded player on :3210)
+  → optional .trace.json when write=True
 ```
 
 - **Manual `Trace`:** fully supported, primary precise API  
 - **`InstrumentationSession`:** Milestone 1 — control-flow  
 - **`TraceArray`:** Milestone 2 — structure bootstrap + `swap` / `assign`  
-- **`@visualize`:** Milestone 3 — public auto API composing the above  
-- **Not yet:** best-effort `compare` inference, AST/bytecode rewriting  
+- **`@visualize`:** Milestone 3 — public auto API + embedded Visualization Service  
+- **Not yet:** live WebSocket streaming, desktop (Tauri) packaging, AST/bytecode rewriting  
 
 ---
 
@@ -32,7 +33,30 @@ Requires Python ≥ 3.9. Zero runtime dependencies.
 
 ---
 
-## Quick start
+## Quick start — `@visualize` (recommended)
+
+```python
+from algoverse import visualize
+
+@visualize
+def bubble_sort(arr):
+    n = len(arr)
+    for i in range(n - 1):
+        for j in range(n - i - 1):
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    return arr
+
+bubble_sort([5, 4, 3, 2])
+# → starts Visualization Service, opens http://localhost:3210
+```
+
+No `npm run dev`. No CLI. Headless: `ALGOVERSE_NO_PLAYER=1` or `open_player=False`.
+Disk file: `@visualize(write=True)`.
+
+---
+
+## Manual Trace API
 
 ```python
 from algoverse import Trace

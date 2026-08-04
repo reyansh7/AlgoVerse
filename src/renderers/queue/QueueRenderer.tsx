@@ -4,6 +4,7 @@ import { useLayoutEffect, useRef } from "react";
 import { gsap } from "@/lib/gsap";
 import { cn } from "@/lib/cn";
 import type { ExecutionState } from "@/core/types/execution";
+import { MOTION, prefersReducedMotion } from "@/lib/visual-language";
 
 interface Props {
   state: ExecutionState | null;
@@ -23,6 +24,10 @@ export function QueueStackRenderer({ state, mode = "queue" }: Props) {
     const els = ref.current.querySelectorAll<HTMLElement>("[data-item]");
     if (!els.length) return;
     gsap.killTweensOf(els);
+    if (prefersReducedMotion()) {
+      gsap.set(els, { x: 0, y: 0, opacity: 1 });
+      return;
+    }
     gsap.fromTo(
       els,
       {
@@ -36,7 +41,7 @@ export function QueueStackRenderer({ state, mode = "queue" }: Props) {
         opacity: 1,
         duration: 0.3,
         stagger: 0.04,
-        ease: "power3.out",
+        ease: MOTION.easeDefault,
         overwrite: "auto",
       },
     );

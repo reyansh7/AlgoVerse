@@ -122,7 +122,7 @@ class TraceArraySessionTests(unittest.TestCase):
                 a[0], a[1] = a[1], a[0]
             return a
 
-        session = InstrumentationSession(trace=tr)
+        session = InstrumentationSession(trace=tr, compact=False)
         out = session.run(sort_step, arr)
         self.assertEqual(out.to_list(), [1, 3, 2])
 

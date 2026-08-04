@@ -1,15 +1,21 @@
-"""Bubble sort via @visualize (Sprint 3 milestone 3).
+"""Bubble sort via @visualize (Milestone 3).
 
-Run:
+Run (no npm / no CLI)::
+
   pip install -e sdk/python
   python examples/bubble_visualize.py
 
-Optional player (with `npm run dev` running):
-  set ALGOVERSE_OPEN_PLAYER=1
+This starts the embedded Visualization Service on http://localhost:3210,
+pushes the Trace over HTTP, and opens your browser.
+
+Disable the player for headless runs::
+
+  set ALGOVERSE_NO_PLAYER=1
   python examples/bubble_visualize.py
 
-Or:
-  npm run algoverse -- run examples/bubble_visualize.py
+Optional disk write::
+
+  @visualize(write=True)
 """
 
 from __future__ import annotations
@@ -30,4 +36,7 @@ def bubble_sort(arr):
 if __name__ == "__main__":
     result = bubble_sort([5, 4, 3, 2])
     print("result:", result)
-    print("trace:", bubble_sort.last_path)
+    if bubble_sort.last_player_url:
+        print("player:", bubble_sort.last_player_url)
+    if bubble_sort.last_path:
+        print("trace file:", bubble_sort.last_path)

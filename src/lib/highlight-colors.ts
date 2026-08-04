@@ -1,27 +1,15 @@
+/**
+ * Backward-compatible re-exports — prefer `@/lib/visual-language`.
+ */
 import type { HighlightKind, Highlights } from "@/core/types/execution";
+import {
+  HIGHLIGHT_COLORS,
+  DEFAULT_BAR_COLOR,
+} from "@/lib/visual-language";
 
-/** alg0.dev-inspired palette — distinct role per operation. */
-export const HIGHLIGHT_COLORS: Record<HighlightKind, string> = {
-  comparing: "#60a5fa",
-  swapped: "#f87171",
-  selected: "#fbbf24",
-  sorted: "#34d399",
-  pivot: "#c084fc",
-  found: "#4ade80",
-  current: "#fb923c",
-  searching: "#38bdf8",
-  left: "#60a5fa",
-  right: "#f472b6",
-  merged: "#818cf8",
-  minimum: "#fbbf24",
-  active: "#2ee6a6",
-  visited: "#a78bfa",
-  write: "#818cf8",
-};
+export { HIGHLIGHT_COLORS, DEFAULT_BAR_COLOR };
 
-export const DEFAULT_BAR_COLOR = "#3a4a63";
-
-/** Build typed index highlights (alg0 Step.highlights shape). */
+/** Build typed index highlights. */
 export function mark(
   kinds: Record<number, HighlightKind>,
   sorted: number[] = [],

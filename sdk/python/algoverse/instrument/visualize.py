@@ -1,8 +1,17 @@
 """
-@visualize — public automatic visualization API (Sprint 3 Milestone 3).
+@visualize — public automatic visualization API (Milestone 3).
 
-Composes existing InstrumentationSession + TraceArray + Trace.
-No AST / bytecode rewriting. Additive to manual Trace APIs.
+Composition (no AST / bytecode; Trace v0.1 unchanged)::
+
+    @visualize
+        → InstrumentationSession
+        → TraceArray (auto-wrap list/tuple args)
+        → TraceRecorder (Trace)
+        → TraceDocument
+        → Visualization Service (embedded player)  [open_player=True]
+        → optional .trace.json                     [write=True]
+
+Manual :class:`~algoverse.Trace` APIs continue to work unchanged.
 """
 
 from __future__ import annotations
@@ -13,7 +22,6 @@ import os
 from pathlib import Path
 from typing import Any, Callable, Optional, TypeVar, Union, overload
 
-from algoverse.instrument.launch import try_open_trace_player
 from algoverse.instrument.session import InstrumentationSession
 from algoverse.instrument.structures import TraceArray
 from algoverse.recorder import Trace, TraceError
@@ -25,6 +33,14 @@ TrackSpec = Union[str, int, None]
 def _env_flag(name: str) -> bool:
     v = os.environ.get(name, "").strip().lower()
     return v in ("1", "true", "yes", "on")
+
+
+def _env_flag_default_true(name: str) -> Optional[bool]:
+    """Return True/False if env set, else None (caller keeps default)."""
+    raw = os.environ.get(name)
+    if raw is None or not str(raw).strip():
+        return None
+    return _env_flag(name)
 
 
 def _is_list_like(value: Any) -> bool:
@@ -99,6 +115,23 @@ def _unwrap_result(result: Any) -> Any:
     return result
 
 
+def _should_open_player(opt: bool) -> bool:
+    """Resolve open_player with env overrides.
+
+    - ``ALGOVERSE_NO_PLAYER=1`` / ``ALGOVERSE_OPEN_PLAYER=0`` → force off
+    - ``ALGOVERSE_OPEN_PLAYER=1`` → force on
+    - else use decorator option
+    """
+    if _env_flag("ALGOVERSE_NO_PLAYER"):
+        return False
+    forced = _env_flag_default_true("ALGOVERSE_OPEN_PLAYER")
+    if forced is False:
+        return False
+    if forced is True:
+        return True
+    return opt
+
+
 class VisualizedFunction:
     """Callable wrapper produced by :func:`visualize`.
 
@@ -108,6 +141,8 @@ class VisualizedFunction:
         The :class:`Trace` from the most recent successful instrumentation run.
     last_path:
         Path returned by the most recent ``write()``, if any.
+    last_player_url:
+        Player URL from the most recent viewer launch, if any.
     """
 
     __slots__ = (
@@ -115,6 +150,7 @@ class VisualizedFunction:
         "_options",
         "last_trace",
         "last_path",
+        "last_player_url",
         "__dict__",
     )
 
@@ -124,6 +160,7 @@ class VisualizedFunction:
         self._options = options
         self.last_trace: Optional[Trace] = None
         self.last_path: Optional[Path] = None
+        self.last_player_url: Optional[str] = None
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         return _run_visualized(self.__wrapped__, self, *args, **kwargs)
@@ -142,10 +179,16 @@ def _run_visualized(
     algorithm: str = opts["algorithm"] or fn.__name__
     track: TrackSpec = opts["track"]
     sync_assign: bool = opts["sync_assign"]
+    compact: bool = opts["compact"]
     array_name: str = opts["name"]
     do_write: bool = opts["write"]
     out: Optional[Union[str, Path]] = opts["out"]
-    open_player: bool = opts["open_player"] or _env_flag("ALGOVERSE_OPEN_PLAYER")
+    open_player = _should_open_player(bool(opts["open_player"]))
+    port: int = int(opts.get("port") or os.environ.get("ALGOVERSE_VIEWER_PORT") or 3210)
+    # Compact teaching traces: skip bookkeeping assign after swap (swap already mutates).
+    assign_after_swap = not compact if opts.get("assign_after_swap") is None else bool(
+        opts["assign_after_swap"]
+    )
 
     sig = inspect.signature(fn)
     try:
@@ -168,65 +211,65 @@ def _run_visualized(
     arrays: list[TraceArray] = []
 
     if isinstance(raw, TraceArray):
-        # Adopt caller's TraceArray — must already be bound to a Trace.
         arr = raw
         tr = arr.trace
-        if tr.algorithm != algorithm and opts["algorithm"]:
-            # Explicit algorithm override on decorator wins for document id only
-            # when we own construction; adopting keeps the existing Trace as-is.
-            pass
         arrays.append(arr)
     else:
-        # One list copy inside TraceArray.tracked (seed + working storage).
         tr, arr = TraceArray.tracked(
             raw,
             algorithm=algorithm,
             name=array_name,
             sync_assign=sync_assign,
+            assign_after_swap=assign_after_swap,
             source_path=source_path,
             source_code=source_code,
         )
         arrays.append(arr)
         bound.arguments[param_name] = arr
 
-    session = InstrumentationSession(trace=tr)
+    session = InstrumentationSession(trace=tr, compact=compact)
     for a in arrays:
         session.register_structure(a)
+
+    print(f"Running {algorithm}...", flush=True)
 
     try:
         result = session.run(fn, *bound.args, **bound.kwargs)
     except Exception:
         owner.last_trace = tr
         owner.last_path = None
+        owner.last_player_url = None
         raise
 
-    # session.stop already flushed registered structures; keep explicit flush for safety.
     for a in arrays:
         a.flush()
 
-    # Validate TraceDocument shape (bootstrap + JSON-friendliness).
     try:
-        tr.to_dict()
+        doc = tr.to_dict()
     except TraceError:
         owner.last_trace = tr
         owner.last_path = None
+        owner.last_player_url = None
         raise
 
     owner.last_trace = tr
     owner.last_path = None
+    owner.last_player_url = None
+
+    print("[algoverse] Trace generated", flush=True)
 
     if do_write:
         path = tr.write(out)
         owner.last_path = path
-        if open_player:
-            try:
-                try_open_trace_player(path)
-            except Exception as e:  # noqa: BLE001 — player open must not fail the algorithm
-                print(
-                    f"[algoverse] tip: player launch failed ({e}). "
-                    f"Trace is at {path}",
-                    flush=True,
-                )
+
+    if open_player:
+        from algoverse.viewer import try_open_viewer
+
+        ok = try_open_viewer(doc, port=port, open_browser=True)
+        if ok:
+            from algoverse.viewer import viewer_base_url
+
+            owner.last_player_url = viewer_base_url(port) + "/"
 
     return _unwrap_result(result)
 
@@ -241,13 +284,16 @@ def visualize(
     *,
     algorithm: Optional[str] = None,
     out: Optional[Union[str, Path]] = None,
-    write: bool = True,
-    open_player: bool = False,
+    write: bool = False,
+    open_player: bool = True,
     track: TrackSpec = None,
     name: str = "array",
     sync_assign: bool = True,
+    compact: bool = True,
+    assign_after_swap: Optional[bool] = None,
     source_path: Optional[str] = None,
     source_code: Optional[str] = None,
+    port: Optional[int] = None,
 ) -> Callable[[F], VisualizedFunction]: ...
 
 
@@ -256,13 +302,16 @@ def visualize(
     *,
     algorithm: Optional[str] = None,
     out: Optional[Union[str, Path]] = None,
-    write: bool = True,
-    open_player: bool = False,
+    write: bool = False,
+    open_player: bool = True,
     track: TrackSpec = None,
     name: str = "array",
     sync_assign: bool = True,
+    compact: bool = True,
+    assign_after_swap: Optional[bool] = None,
     source_path: Optional[str] = None,
     source_code: Optional[str] = None,
+    port: Optional[int] = None,
 ) -> Any:
     """Decorate a function so each call emits a TraceDocument automatically.
 
@@ -271,23 +320,34 @@ def visualize(
     algorithm:
         Trace ``algorithm`` id (default: function ``__name__``).
     out:
-        Output path for ``Trace.write`` (else ``ALGOVERSE_TRACE_OUT`` / default).
+        Output path for ``Trace.write`` when ``write=True``.
     write:
-        If True (default), write ``.trace.json`` after a successful run.
+        If True, write ``.trace.json`` after a successful run (default False).
     open_player:
-        If True (or env ``ALGOVERSE_OPEN_PLAYER=1``), best-effort open the Trace Player.
+        If True (default), start the embedded Visualization Service and open
+        the browser. Disable with ``open_player=False`` or ``ALGOVERSE_NO_PLAYER=1``.
     track:
         Which parameter is the primary array: name (``str``), bind-order index
         (``int``), or ``None`` for the first list/tuple/TraceArray argument.
     name:
         Variable name used for TraceArray ``assign`` events (default ``\"array\"``).
     sync_assign:
-        Forwarded to :class:`TraceArray` (disable to avoid O(n) snapshots).
+        Forwarded to :class:`TraceArray` — emit ``assign`` after non-swap writes.
+    compact:
+        When True (default), emit a short teaching trace: no ``line`` spam, no
+        local loop-counter assigns; keep ``call`` / ``compare`` / ``swap`` /
+        ``return`` and meaningful structure writes.
+    assign_after_swap:
+        If None, defaults to ``not compact``. When False, skip bookkeeping
+        ``assign`` after ``swap`` (Player already applies swap to the array).
     source_path / source_code:
         Optional Trace source panel overrides (else ``inspect`` best-effort).
+    port:
+        Visualization Service port (default 3210 / ``ALGOVERSE_VIEWER_PORT``).
 
     Examples
     --------
+    >>> from algoverse import visualize
     >>> @visualize
     ... def bubble_sort(arr):
     ...     ...
@@ -302,8 +362,11 @@ def visualize(
         "track": track,
         "name": name,
         "sync_assign": sync_assign,
+        "compact": compact,
+        "assign_after_swap": assign_after_swap,
         "source_path": source_path,
         "source_code": source_code,
+        "port": port,
     }
 
     def decorator(f: Callable[..., Any]) -> VisualizedFunction:

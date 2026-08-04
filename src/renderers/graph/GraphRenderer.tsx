@@ -3,6 +3,7 @@
 import { useLayoutEffect, useMemo, useRef } from "react";
 import { gsap } from "@/lib/gsap";
 import type { ExecutionState } from "@/core/types/execution";
+import { MOTION, prefersReducedMotion } from "@/lib/visual-language";
 import { QueueStackRenderer } from "../queue/QueueRenderer";
 
 interface Props {
@@ -79,16 +80,18 @@ export function GraphRenderer({ state }: Props) {
     gsap.killTweensOf(activeNodes);
     gsap.killTweensOf(activeEdges);
 
+    if (prefersReducedMotion()) return;
+
     if (activeNodes.length) {
       gsap.fromTo(
         activeNodes,
         { scale: 0.85, transformOrigin: "center" },
         {
-          scale: 1.12,
+          scale: MOTION.pulseScale,
           duration: 0.28,
           yoyo: true,
           repeat: 1,
-          ease: "power2.out",
+          ease: MOTION.easePulse,
           overwrite: "auto",
         },
       );
@@ -100,7 +103,7 @@ export function GraphRenderer({ state }: Props) {
         {
           attr: { "stroke-opacity": 1 },
           duration: 0.35,
-          ease: "power2.out",
+          ease: MOTION.easeDefault,
           overwrite: "auto",
         },
       );

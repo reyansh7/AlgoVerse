@@ -11,10 +11,18 @@ import {
   TracePlaybackControls,
   EventLog,
 } from "@/panels";
+import { LearningPanel } from "@/components/trace/learning";
 import { useTraceStore } from "@/store/traceStore";
 import { usePlayerStore } from "@/store/playerStore";
 import { useSelectionStore } from "@/store/selectionStore";
 import { frameToExecutionState } from "@/engine/state";
+import { diffStates } from "@/core/animation/diff";
+import {
+  explainStep,
+  collectLegend,
+  buildTraceIntro,
+  buildTraceSummary,
+} from "@/engine/explain";
 import type { ExecutionState } from "@/core/types/execution";
 import { cn } from "@/lib/cn";
 
@@ -24,7 +32,7 @@ async function loadSample(): Promise<string> {
   return res.text();
 }
 
-/** Hide internal reducer keys from the State panel. */
+/** Hide internal reducer keys from the Variables panel. */
 function displayState(state: ExecutionState | null): ExecutionState | null {
   if (!state) return null;
   const variables: Record<string, unknown> = {};
@@ -35,12 +43,21 @@ function displayState(state: ExecutionState | null): ExecutionState | null {
   return { ...state, variables };
 }
 
+function structuresPresent(state: ExecutionState | null): string[] {
+  if (!state) return [];
+  return (Object.keys(state.structures) as (keyof ExecutionState["structures"])[])
+    .filter((k) => state.structures[k] != null);
+}
+
 export function TraceWorkspace() {
   const fileRef = useRef<HTMLInputElement>(null);
   const loadedOnce = useRef(false);
   const [paste, setPaste] = useState("");
   const [loading, setLoading] = useState(true);
   const [dragOver, setDragOver] = useState(false);
+  const [showIntro, setShowIntro] = useState(true);
+  const [codeOpen, setCodeOpen] = useState(true);
+  const [onboarding, setOnboarding] = useState(false);
 
   const document = useTraceStore((s) => s.document);
   const error = useTraceStore((s) => s.error);
@@ -53,6 +70,7 @@ export function TraceWorkspace() {
   const loadPlayer = usePlayerStore((s) => s.load);
   const jump = usePlayerStore((s) => s.jump);
   const speed = usePlayerStore((s) => s.speed);
+  const isPlaying = usePlayerStore((s) => s.isPlaying);
 
   const selectEvent = useSelectionStore((s) => s.selectEvent);
   const selectedEventIndex = useSelectionStore((s) => s.selectedEventIndex);
@@ -70,6 +88,7 @@ export function TraceWorkspace() {
         loadPlayer(doc);
         selectEvent(null);
         setError(null);
+        setShowIntro(true);
       } catch (e) {
         const msg =
           e instanceof TraceValidationError
@@ -86,6 +105,17 @@ export function TraceWorkspace() {
   useEffect(() => {
     if (loadedOnce.current) return;
     loadedOnce.current = true;
+
+    try {
+      if (
+        typeof window !== "undefined" &&
+        !window.localStorage.getItem("algoverse.trace.onboarded")
+      ) {
+        setOnboarding(true);
+      }
+    } catch {
+      /* ignore */
+    }
 
     const params = new URLSearchParams(window.location.search);
     const src = params.get("src");
@@ -144,6 +174,31 @@ export function TraceWorkspace() {
     [frames, currentStep],
   );
 
+  const diff = useMemo(() => diffStates(previous, state), [previous, state]);
+
+  const event = document?.events[currentStep];
+  const lesson = useMemo(
+    () => explainStep(event, state, diff),
+    [event, state, diff],
+  );
+
+  const legend = useMemo(() => collectLegend(document), [document]);
+
+  const structureKinds = useMemo(() => structuresPresent(state), [state]);
+
+  const intro = useMemo(
+    () => buildTraceIntro(document, structureKinds),
+    [document, structureKinds],
+  );
+
+  const summary = useMemo(
+    () => buildTraceSummary(document, structureKinds),
+    [document, structureKinds],
+  );
+
+  const atEnd =
+    frames.length > 0 && currentStep >= frames.length - 1 && !isPlaying;
+
   const codeLines = useMemo(() => {
     const code = document?.source?.code;
     if (!code) return [];
@@ -158,8 +213,17 @@ export function TraceWorkspace() {
     if (fileRef.current) fileRef.current.value = "";
   };
 
+  const dismissOnboarding = () => {
+    setOnboarding(false);
+    try {
+      window.localStorage.setItem("algoverse.trace.onboarded", "1");
+    } catch {
+      /* ignore */
+    }
+  };
+
   return (
-    <div className="mx-auto flex h-full w-full max-w-7xl flex-col gap-3 overflow-hidden px-5 pb-3 pt-20">
+    <div className="mx-auto flex h-full w-full max-w-7xl flex-col gap-2 overflow-hidden px-5 pb-2 pt-20">
       <header className="flex shrink-0 flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
           <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-accent">
@@ -171,7 +235,7 @@ export function TraceWorkspace() {
           <p className="mt-0.5 truncate text-xs text-text-muted">
             {sourceLabel
               ? `${sourceLabel} · ${document?.language ?? ""}`
-              : "Upload a .trace.json or try the bubble sort sample."}
+              : "Upload a .trace.json or try the sample."}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -203,7 +267,7 @@ export function TraceWorkspace() {
             href="/learn/bubble-sort"
             className="rounded-xl px-2 py-1.5 text-sm text-text-muted transition hover:text-text-primary"
           >
-            Learn bubble sort →
+            Learn →
           </Link>
           <input
             ref={fileRef}
@@ -218,6 +282,26 @@ export function TraceWorkspace() {
           />
         </div>
       </header>
+
+      {onboarding && (
+        <div
+          role="status"
+          className="flex shrink-0 items-start justify-between gap-3 rounded-xl border border-accent/30 bg-accent/10 px-4 py-2 text-sm text-text-primary"
+        >
+          <p>
+            Watch the stage and the Guide panel — play to step through
+            execution. Open Event log only if you need raw debug data.
+          </p>
+          <button
+            type="button"
+            onClick={dismissOnboarding}
+            className="shrink-0 rounded-md p-0.5 opacity-70 hover:opacity-100"
+            aria-label="Dismiss tip"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {error && (
         <div
@@ -237,9 +321,9 @@ export function TraceWorkspace() {
         </div>
       )}
 
-      {/* Single-page workspace: stage + sidebar; lists scroll inside panels */}
-      <div className="grid min-h-0 flex-1 gap-3 overflow-hidden lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden">
+      {/* Viz dominant + Learning Layer secondary */}
+      <div className="grid min-h-0 flex-1 gap-3 overflow-hidden lg:grid-cols-[minmax(0,1.7fr)_minmax(280px,1fr)]">
+        <div className="flex min-h-0 min-w-0 flex-col gap-2 overflow-hidden">
           <div
             className={cn(
               "glass relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl p-3",
@@ -265,33 +349,17 @@ export function TraceWorkspace() {
               <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center text-text-muted">
                 <Upload className="h-8 w-8 opacity-50" />
                 <p className="text-sm">
-                  Drop a <code className="text-accent">.trace.json</code> here, or
-                  use Upload / Load sample.
+                  Drop a <code className="text-accent">.trace.json</code> here,
+                  or use Upload / Load sample.
                 </p>
               </div>
             ) : (
               <>
-                <div className="pointer-events-none absolute left-3 right-3 top-3 z-10 flex flex-wrap items-start justify-between gap-2">
-                  <div className="max-w-xl rounded-xl border border-white/10 bg-bg-deep/80 px-3 py-2 shadow-lg backdrop-blur-md">
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-md bg-accent/20 px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-accent">
-                        {state.operation || "step"}
-                      </span>
-                      <span className="font-mono text-[10px] text-text-muted">
-                        step {state.step}
-                        {state.line > 0 ? ` · L${state.line}` : ""}
-                      </span>
-                    </div>
-                    {state.description ? (
-                      <p className="mt-1 line-clamp-2 text-sm leading-snug text-text-primary/95">
-                        {state.description}
-                      </p>
-                    ) : (
-                      <p className="mt-1 text-sm text-text-muted">
-                        Watch what moves — only meaningful changes animate.
-                      </p>
-                    )}
-                  </div>
+                <div className="pointer-events-none absolute left-3 top-3 z-10">
+                  <span className="rounded-md border border-white/10 bg-bg-deep/70 px-2 py-1 font-mono text-[10px] text-text-muted backdrop-blur-md">
+                    step {state.step}
+                    {state.line > 0 ? ` · L${state.line}` : ""}
+                  </span>
                 </div>
                 <div className="min-h-0 flex-1 overflow-auto">
                   <StructureStage
@@ -303,50 +371,84 @@ export function TraceWorkspace() {
               </>
             )}
           </div>
-          <div className="shrink-0">
-            <TracePlaybackControls />
-          </div>
         </div>
 
-        <aside className="flex min-h-0 flex-col gap-3 overflow-hidden">
-          <div className="min-h-0 basis-[28%] overflow-hidden">
-            <VariablesPanel state={state} previous={previous} />
-          </div>
-          <div className="min-h-0 basis-[28%] overflow-hidden">
-            {codeLines.length > 0 ? (
-              <CodePanel
-                title="Source"
-                code={codeLines}
-                activeLine={
-                  state?.line && state.line > 0 ? state.line - 1 : null
-                }
-              />
-            ) : (
-              <div className="glass flex h-full items-center justify-center rounded-2xl px-4 text-center text-sm text-text-muted">
-                No source in this trace — pass{" "}
-                <code className="mx-1 text-accent">source_code=</code> when
-                emitting.
-              </div>
-            )}
-          </div>
-          <div className="min-h-0 flex-1 basis-[44%] overflow-hidden">
-            <EventLog
-              events={document?.events ?? []}
-              activeIndex={currentStep}
+        <aside className="flex min-h-0 flex-col gap-2 overflow-hidden">
+          <div className="min-h-0 flex-[1.4] basis-0 overflow-hidden">
+            <LearningPanel
+              lesson={lesson}
+              legend={legend}
+              step={currentStep}
+              total={frames.length}
+              intro={intro}
+              summary={summary}
+              showIntro={showIntro && !!intro && currentStep < 2}
+              showSummary={atEnd && !!summary}
+              onDismissIntro={() => setShowIntro(false)}
             />
+          </div>
+
+          <div className="min-h-0 flex-1 basis-0 overflow-hidden">
+            <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setCodeOpen((v) => !v)}
+                className="shrink-0 rounded-lg px-1 text-left text-[10px] uppercase tracking-wider text-text-muted hover:text-text-primary"
+              >
+                Source {codeOpen ? "▾" : "▸"}
+              </button>
+              {codeOpen && (
+                <div className="min-h-0 flex-1 overflow-hidden">
+                  {codeLines.length > 0 ? (
+                    <CodePanel
+                      title="Source"
+                      code={codeLines}
+                      activeLine={
+                        state?.line && state.line > 0 ? state.line - 1 : null
+                      }
+                    />
+                  ) : (
+                    <div className="glass flex h-full items-center justify-center rounded-2xl px-4 text-center text-sm text-text-muted">
+                      No source in this trace
+                    </div>
+                  )}
+                </div>
+              )}
+              <div
+                className={cn(
+                  "min-h-0 overflow-hidden",
+                  codeOpen ? "basis-[40%] flex-1" : "flex-1",
+                )}
+              >
+                <VariablesPanel
+                  state={state}
+                  previous={previous}
+                  compact
+                />
+              </div>
+            </div>
           </div>
         </aside>
       </div>
 
-      <details className="shrink-0 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-1.5">
+      <div className="shrink-0 space-y-2">
+        <TracePlaybackControls />
+        <EventLog
+          events={document?.events ?? []}
+          activeIndex={currentStep}
+          defaultOpen={false}
+        />
+      </div>
+
+      <details className="shrink-0 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-1">
         <summary className="cursor-pointer text-xs text-text-muted">
           Paste trace JSON
         </summary>
         <textarea
           value={paste}
           onChange={(e) => setPaste(e.target.value)}
-          rows={4}
-          className="mt-2 max-h-28 w-full rounded-xl border border-white/10 bg-black/30 p-2 font-mono text-xs text-text-primary outline-none focus:border-accent/40"
+          rows={3}
+          className="mt-2 max-h-24 w-full rounded-xl border border-white/10 bg-black/30 p-2 font-mono text-xs text-text-primary outline-none focus:border-accent/40"
           placeholder='{ "version": "0.1", … }'
         />
         <button

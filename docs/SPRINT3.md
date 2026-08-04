@@ -12,7 +12,7 @@ Manual `Trace` remains supported forever. Auto-instrumentation is an additional 
 |-----------|-------------|--------|
 | 1 | `InstrumentationSession` (`sys.settrace` → `call` / `return` / `line` / `assign`) | **Done** |
 | 2 | `TraceArray` (list proxy → structure bootstrap / swap / assign) | **Done** |
-| 3 | `@visualize` public API (+ optional player launch) | **Done** |
+| 3 | `@visualize` + embedded Visualization Service (auto browser) | **Done** |
 | — | Sprint 3 complete → v0.3 Array Plugin | See [`ARRAY_PLUGIN.md`](./ARRAY_PLUGIN.md) |
 
 Naming note: plan text historically said `TrackedArray`; implementation uses **`TraceArray`**.

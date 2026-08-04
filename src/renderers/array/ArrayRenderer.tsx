@@ -4,8 +4,14 @@ import { useLayoutEffect, useMemo, useRef } from "react";
 import { gsap } from "@/lib/gsap";
 import type { ExecutionState } from "@/core/types/execution";
 import { diffStates } from "@/core/animation/diff";
-import { barColor, HIGHLIGHT_COLORS } from "@/lib/highlight-colors";
-import { BASE_STEP_MS } from "@/core/scheduler";
+import { planAnimation } from "@/core/animation/orchestrator";
+import { barColor } from "@/lib/highlight-colors";
+import {
+  HIGHLIGHT_COLORS,
+  MOTION,
+  prefersReducedMotion,
+  stepBudgetSec,
+} from "@/lib/visual-language";
 
 interface Props {
   state: ExecutionState | null;
@@ -16,17 +22,6 @@ interface Props {
 
 const GAP = 6;
 const TRACK_H = 260;
-
-function prefersReducedMotion(): boolean {
-  if (typeof window === "undefined") return false;
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
-
-/** Keep tweens inside the playback step budget so motion finishes before the next event. */
-function stepBudgetSec(speed: number): number {
-  const s = Math.max(0.25, Math.min(speed, 32));
-  return (BASE_STEP_MS / s / 1000) * 0.72;
-}
 
 export function ArrayRenderer({ state, previous, speed = 1 }: Props) {
   const trackRef = useRef<HTMLDivElement>(null);
@@ -109,6 +104,7 @@ export function ArrayRenderer({ state, previous, speed = 1 }: Props) {
     if (!state || step === undefined || n === 0) return;
 
     const diff = diffStates(previous, state);
+    const plan = planAnimation(diff);
     const first = !mounted.current;
     mounted.current = true;
 
@@ -124,6 +120,7 @@ export function ArrayRenderer({ state, previous, speed = 1 }: Props) {
     const swapLift = instant ? 0 : Math.min(0.18, budget * 0.28);
     const swapSlide = instant ? 0 : Math.min(0.36, budget * 0.55);
     const pulseDur = instant ? 0 : Math.min(0.16, budget * 0.22);
+    const pulseOps = new Set(["compare", "highlight", "swap"]);
 
     for (const [index, el] of cellRefs.current) {
       if (index >= n) continue;
@@ -139,7 +136,7 @@ export function ArrayRenderer({ state, previous, speed = 1 }: Props) {
           backgroundColor: color,
           opacity: active ? 1 : 0.55,
           duration: colorDur,
-          ease: "power2.out",
+          ease: MOTION.easeDefault,
           overwrite: "auto",
         });
       }
@@ -181,10 +178,10 @@ export function ArrayRenderer({ state, previous, speed = 1 }: Props) {
         gsap
           .timeline({ defaults: { overwrite: "auto" } })
           .set(el, { x: partner * slot, zIndex: 20 })
-          .to(el, { y: lift, duration: swapLift, ease: "power2.out" })
+          .to(el, { y: lift, duration: swapLift, ease: MOTION.easeDefault })
           .to(
             el,
-            { x: targetX, duration: swapSlide, ease: "power3.inOut" },
+            { x: targetX, duration: swapSlide, ease: MOTION.easeSwap },
             "<0.04",
           )
           .to(el, {
@@ -203,24 +200,22 @@ export function ArrayRenderer({ state, previous, speed = 1 }: Props) {
         });
       }
 
-      // Signature pulse for compare / focus ops — after highlight color settles.
+      // Pulse affected indices from AnimationPlan — Trace event ops only.
       if (
         kinds[index] &&
-        (operation === "compare" ||
-          operation === "found" ||
-          operation === "mid" ||
-          operation === "minimum" ||
-          operation === "pivot")
+        (plan.pulseIndices.includes(index) ||
+          pulseOps.has(plan.emphasizeOperation) ||
+          pulseOps.has(operation))
       ) {
         gsap.fromTo(
           el,
           { scale: 1 },
           {
-            scale: 1.1,
+            scale: MOTION.pulseScale,
             duration: pulseDur,
             yoyo: true,
             repeat: 1,
-            ease: "power2.out",
+            ease: MOTION.easePulse,
             overwrite: false,
             delay: colorDur * 0.35,
           },
@@ -266,18 +261,7 @@ export function ArrayRenderer({ state, previous, speed = 1 }: Props) {
   }
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-col items-center justify-center gap-3 overflow-x-auto px-4 pb-4 pt-12">
-      {/* legend — fixed color language */}
-      <div className="flex flex-wrap items-center justify-center gap-3 text-[10px] uppercase tracking-wider text-text-muted">
-        <Legend swatch={HIGHLIGHT_COLORS.comparing} label="compare" />
-        <Legend swatch={HIGHLIGHT_COLORS.swapped} label="swap" />
-        <Legend swatch={HIGHLIGHT_COLORS.sorted} label="sorted" />
-        <Legend swatch={HIGHLIGHT_COLORS.pivot} label="pivot" />
-        <Legend swatch={HIGHLIGHT_COLORS.found} label="found" />
-        <Legend swatch={HIGHLIGHT_COLORS.left} label="left" />
-        <Legend swatch={HIGHLIGHT_COLORS.right} label="right" />
-      </div>
-
+    <div className="flex h-full min-h-0 w-full flex-col items-center justify-center gap-3 overflow-x-auto px-4 pb-4 pt-10">
       <div
         ref={trackRef}
         className="relative shrink-0"
@@ -369,17 +353,5 @@ export function ArrayRenderer({ state, previous, speed = 1 }: Props) {
         </div>
       </div>
     </div>
-  );
-}
-
-function Legend({ swatch, label }: { swatch: string; label: string }) {
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      <span
-        className="inline-block h-2 w-2 rounded-sm"
-        style={{ backgroundColor: swatch }}
-      />
-      {label}
-    </span>
   );
 }

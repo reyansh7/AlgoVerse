@@ -5,6 +5,7 @@ import { gsap } from "@/lib/gsap";
 import { cn } from "@/lib/cn";
 import type { ExecutionState } from "@/core/types/execution";
 import { HIGHLIGHT_COLORS } from "@/lib/highlight-colors";
+import { MOTION, prefersReducedMotion } from "@/lib/visual-language";
 
 interface Props {
   state: ExecutionState | null;
@@ -16,16 +17,14 @@ export function DPTableRenderer({ state }: Props) {
   const highlightFlat = new Set(state?.highlights.indices ?? []);
   const cols = table[0]?.length ?? 0;
   const step = state?.step;
-  const operation = state?.operation ?? "";
+  const kinds = state?.highlights.indexKinds ?? {};
 
-  const activeColor =
-    operation === "skip"
-      ? HIGHLIGHT_COLORS.visited
-      : operation === "done"
-        ? HIGHLIGHT_COLORS.found
-        : operation === "update"
-          ? HIGHLIGHT_COLORS.write
-          : HIGHLIGHT_COLORS.comparing;
+  // Color from highlight kinds on the active cell — never algorithm operation names.
+  const activeColor = (() => {
+    const firstKind = Object.values(kinds)[0];
+    if (firstKind) return HIGHLIGHT_COLORS[firstKind];
+    return HIGHLIGHT_COLORS.write;
+  })();
 
   useLayoutEffect(() => {
     if (!ref.current || step === undefined) return;
@@ -35,13 +34,17 @@ export function DPTableRenderer({ state }: Props) {
     if (!active.length) return;
 
     gsap.killTweensOf(active);
+    if (prefersReducedMotion()) {
+      gsap.set(active, { scale: 1 });
+      return;
+    }
     gsap.fromTo(
       active,
       { scale: 0.72 },
       {
-        scale: 1.12,
+        scale: MOTION.pulseScale,
         duration: 0.28,
-        ease: "back.out(2)",
+        ease: MOTION.easePulse,
         yoyo: true,
         repeat: 1,
         overwrite: "auto",

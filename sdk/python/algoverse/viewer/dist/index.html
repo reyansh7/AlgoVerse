@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AlgoVerse Player</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="top">
+        <div>
+          <p class="eyebrow">AlgoVerse · Trace Player</p>
+          <h1 id="title">Waiting for trace…</h1>
+          <p id="meta" class="meta"></p>
+        </div>
+        <div class="badge" id="status">Idle</div>
+      </header>
+
+      <main class="layout">
+        <section class="stage glass">
+          <div id="hud" class="hud"></div>
+          <div id="bars" class="bars" aria-label="Array visualization"></div>
+          <p id="empty" class="empty">
+            Run <code>@visualize</code> from Python — the trace will appear here.
+          </p>
+        </section>
+
+        <aside class="side">
+          <section class="glass panel">
+            <h2>Guide</h2>
+            <p id="op" class="op">—</p>
+            <p id="desc" class="desc">No step yet.</p>
+            <ul id="changed" class="changed"></ul>
+          </section>
+          <section class="glass panel">
+            <h2>Variables</h2>
+            <pre id="vars" class="vars">{}</pre>
+          </section>
+        </aside>
+      </main>
+
+      <footer class="controls glass">
+        <div class="transport">
+          <button type="button" id="btn-restart" aria-label="Restart">↺</button>
+          <button type="button" id="btn-prev" aria-label="Previous">‹</button>
+          <button type="button" id="btn-play" class="primary" aria-label="Play">▶</button>
+          <button type="button" id="btn-next" aria-label="Next">›</button>
+          <button type="button" id="btn-end" aria-label="Last">»</button>
+        </div>
+        <div id="step-label" class="step-label">—</div>
+        <input type="range" id="scrub" min="0" max="0" value="0" aria-label="Scrub" />
+        <div class="speeds" id="speeds">
+          <button type="button" data-speed="0.5">0.5×</button>
+          <button type="button" data-speed="1" class="active">1×</button>
+          <button type="button" data-speed="2">2×</button>
+          <button type="button" data-speed="4">4×</button>
+        </div>
+      </footer>
+    </div>
+    <script src="/player.js"></script>
+  </body>
+</html>

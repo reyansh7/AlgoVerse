@@ -56,7 +56,19 @@ def _snapshot_locals(frame: types.FrameType) -> dict[str, Any]:
 
 
 class InstrumentationSession:
-    """Scoped automatic emitter that writes into an existing :class:`Trace`."""
+    """Scoped automatic emitter that writes into an existing :class:`Trace`.
+
+    Parameters
+    ----------
+    compact:
+        When True (preferred for teaching traces), suppress noisy bookkeeping:
+
+        - no ``line`` events (source line is still stamped onto structures)
+        - no local ``assign`` diffs for loop counters / temps
+
+        Keep ``call`` / ``return``. Structure plugins (e.g. TraceArray) still
+        emit ``compare`` / ``swap`` / meaningful ``assign`` / ``highlight``.
+    """
 
     def __init__(
         self,
@@ -67,6 +79,7 @@ class InstrumentationSession:
         source_path: Optional[str] = None,
         source_code: Optional[str] = None,
         trace: Optional[Trace] = None,
+        compact: bool = False,
     ) -> None:
         if trace is not None:
             self._trace = trace
@@ -88,6 +101,7 @@ class InstrumentationSession:
                 metadata=metadata,
             )
 
+        self._compact = bool(compact)
         self._active = False
         self._prev_trace: Optional[Callable[..., Any]] = None
         self._target_code: Optional[types.CodeType] = None
@@ -178,13 +192,20 @@ class InstrumentationSession:
 
         if event == "line":
             self._stamp_structures(frame.f_lineno)
-            self._trace.line(frame.f_lineno)
-            self._emit_assign_diffs(frame)
+            if not self._compact:
+                self._trace.line(frame.f_lineno)
+                self._emit_assign_diffs(frame)
+            else:
+                # Still track locals so a future verbose mode / debug can use them,
+                # but do not emit — loop counters are noise for the Player story.
+                fid = id(frame)
+                self._locals_by_frame[fid] = _snapshot_locals(frame)
             return self._on_trace
 
         if event == "return":
             self._stamp_structures(frame.f_lineno)
-            self._emit_assign_diffs(frame)
+            if not self._compact:
+                self._emit_assign_diffs(frame)
             value = arg if _is_jsonish(arg) else None
             kwargs: dict[str, Any] = {"line": frame.f_lineno}
             if value is not None:

@@ -18,3 +18,9 @@ Homepage = "https://github.com/reyansh7/AlgoVerse"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["algoverse*"]
+
+[tool.setuptools.package-data]
+algoverse = ["viewer/dist/**/*"]
+
+[project.scripts]
+algoverse-viewer = "algoverse.viewer.__main__:main"

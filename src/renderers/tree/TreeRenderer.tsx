@@ -4,6 +4,7 @@ import { useLayoutEffect, useMemo, useRef } from "react";
 import { gsap } from "@/lib/gsap";
 import type { ExecutionState } from "@/core/types/execution";
 import type { TreeNode } from "@/core/types/structures";
+import { MOTION, prefersReducedMotion } from "@/lib/visual-language";
 
 interface Props {
   state: ExecutionState | null;
@@ -87,15 +88,19 @@ export function TreeRenderer({ state }: Props) {
     if (!circles.length) return;
 
     gsap.killTweensOf(circles);
+    if (prefersReducedMotion()) {
+      circles.forEach((c) => c.setAttribute("r", String(R)));
+      return;
+    }
     gsap.fromTo(
       circles,
       { attr: { r: R * 0.85 } },
       {
-        attr: { r: R * 1.2 },
+        attr: { r: R * MOTION.pulseScale },
         duration: 0.28,
         yoyo: true,
         repeat: 1,
-        ease: "power2.out",
+        ease: MOTION.easePulse,
         overwrite: "auto",
         onComplete: () => {
           circles.forEach((c) => c.setAttribute("r", String(R)));

@@ -22,6 +22,7 @@ class InstrumentationSessionTests(unittest.TestCase):
             algorithm="add",
             metadata={"initial": {"array": [0]}},
             source_code="def add(a, b):\n    s = a + b\n    return s\n",
+            compact=False,
         )
         result = session.run(add, 2, 3)
         self.assertEqual(result, 5)
@@ -39,6 +40,23 @@ class InstrumentationSessionTests(unittest.TestCase):
         doc = session.trace.to_dict()
         self.assertEqual(doc["metadata"]["initial"]["array"], [0])
         self.assertEqual(doc["algorithm"], "add")
+
+    def test_compact_suppresses_line_and_local_assigns(self) -> None:
+        def add(a: int, b: int) -> int:
+            s = a + b
+            return s
+
+        session = InstrumentationSession(
+            algorithm="add",
+            metadata={"initial": {"array": [0]}},
+            compact=True,
+        )
+        self.assertEqual(session.run(add, 2, 3), 5)
+        types = _types(session)
+        self.assertEqual(types[0], "call")
+        self.assertEqual(types[-1], "return")
+        self.assertNotIn("line", types)
+        self.assertNotIn("assign", types)
 
     def test_restores_trace_hook_after_exception(self) -> None:
         def boom() -> None:

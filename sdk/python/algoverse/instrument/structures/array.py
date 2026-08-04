@@ -36,6 +36,7 @@ class TraceArray(TraceStructure, MutableSequence[Any]):
         "_reads",
         "_read_count",
         "_emit_compare",
+        "_last_compare",
     )
 
     def __init__(
@@ -46,15 +47,23 @@ class TraceArray(TraceStructure, MutableSequence[Any]):
         name: str = "array",
         seed_metadata: bool = True,
         sync_assign: bool = True,
+        assign_after_swap: bool = True,
         line: Optional[int] = None,
         emit_compare: bool = True,
     ) -> None:
-        super().__init__(trace, name=name, sync_assign=sync_assign, line=line)
+        super().__init__(
+            trace,
+            name=name,
+            sync_assign=sync_assign,
+            assign_after_swap=assign_after_swap,
+            line=line,
+        )
         self._data: list[Any] = list(values)
         self._pending_write: Optional[tuple[int, Any, Any]] = None
         self._reads: list[tuple[int, Any]] = []
         self._read_count = 0
         self._emit_compare = bool(emit_compare)
+        self._last_compare: Optional[tuple[int, int]] = None
 
         if seed_metadata:
             self._seed_metadata()
@@ -67,6 +76,7 @@ class TraceArray(TraceStructure, MutableSequence[Any]):
         algorithm: str,
         name: str = "array",
         sync_assign: bool = True,
+        assign_after_swap: bool = True,
         emit_compare: bool = True,
         language: str = "python",
         source_path: Optional[str] = None,
@@ -92,9 +102,25 @@ class TraceArray(TraceStructure, MutableSequence[Any]):
             name=name,
             seed_metadata=False,
             sync_assign=sync_assign,
+            assign_after_swap=assign_after_swap,
             emit_compare=emit_compare,
         )
         return tr, arr
+
+    @property
+    def line(self) -> Optional[int]:
+        return self._line
+
+    @line.setter
+    def line(self, value: Optional[int]) -> None:
+        """New source line → reset read window so compares stay per-expression.
+
+        Keeps ``_last_compare`` so ``if a[i] > a[j]: a[i], a[j] = …`` does not
+        emit a second compare for the unpack RHS on the next line.
+        """
+        if value != self._line:
+            self._reads.clear()
+        self._line = value
 
     def _seed_metadata(self) -> None:
         meta = self._trace.metadata
@@ -120,8 +146,13 @@ class TraceArray(TraceStructure, MutableSequence[Any]):
         (i1, v1), (i2, v2) = self._reads[0], self._reads[1]
         if i1 == i2:
             return
+        # Skip duplicate compare that does not change the visualization.
+        pair = (i1, i2) if i1 < i2 else (i2, i1)
+        if self._last_compare == pair:
+            return
         # Paired distinct index reads → best-effort compare (bubble/selection/quick/heap).
         self._trace.compare(i1, i2, values=[v1, v2], line=self._line)
+        self._last_compare = pair
 
     @property
     def last_reads(self) -> tuple[tuple[int, Any], ...]:
@@ -146,8 +177,11 @@ class TraceArray(TraceStructure, MutableSequence[Any]):
                 self._data[index] = new
                 self._pending_write = None
                 self._trace.swap(pj, index, line=self._line)
-                self._emit_assign(self._data.copy())
+                # swap already mutates Player structures — optional bookkeeping only.
+                if self._assign_after_swap:
+                    self._emit_assign(self._data.copy())
                 self._reads.clear()
+                self._last_compare = None
                 return
             self._flush_pending_write()
 
@@ -155,6 +189,7 @@ class TraceArray(TraceStructure, MutableSequence[Any]):
         if old != new:
             self._pending_write = (index, old, new)
         self._reads.clear()
+        self._last_compare = None
 
     def flush(self) -> None:
         self._flush_pending_write()

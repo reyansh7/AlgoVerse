@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Pause,
   Play,
@@ -9,13 +9,15 @@ import {
   SkipForward,
   ChevronsLeft,
   ChevronsRight,
+  Keyboard,
 } from "lucide-react";
 import { usePlayerStore } from "@/store/playerStore";
 import { useTraceStore } from "@/store/traceStore";
 import { useTracePlaybackClock } from "@/hooks/useTracePlaybackClock";
+import { buildMoments } from "@/engine/timeline/buildMoments";
+import { MomentTimeline } from "./MomentTimeline";
 import { cn } from "@/lib/cn";
 
-/** Professional visualizer speeds — ∞ is a fast scrub through steps. */
 const SPEEDS: { value: number; label: string }[] = [
   { value: 0.25, label: "0.25×" },
   { value: 0.5, label: "0.5×" },
@@ -25,16 +27,7 @@ const SPEEDS: { value: number; label: string }[] = [
   { value: 16, label: "∞" },
 ];
 
-const MARKER_COLOR: Record<string, string> = {
-  compare: "#60a5fa",
-  swap: "#f87171",
-  assign: "#f0b429",
-  call: "#2ee6a6",
-  return: "#3ecbff",
-  highlight: "#c084fc",
-};
-
-/** Playback chrome bound to the Trace playerStore (not Learn playback-store). */
+/** Playback chrome bound to the Trace playerStore. */
 export function TracePlaybackControls() {
   useTracePlaybackClock();
 
@@ -52,24 +45,24 @@ export function TracePlaybackControls() {
   const setSpeed = usePlayerStore((s) => s.setSpeed);
 
   const events = useTraceStore((s) => s.document?.events);
+  const [showKeys, setShowKeys] = useState(false);
 
   const total = frames.length;
   const max = Math.max(0, total - 1);
   const empty = total === 0;
 
-  const markers = useMemo(() => {
-    if (!events?.length || total === 0) return [];
-    return events
-      .map((e, i) => ({ i, type: e.type, color: MARKER_COLOR[e.type] }))
-      .filter((m) => m.color);
-  }, [events, total]);
+  const moments = useMemo(
+    () => buildMoments(events ?? []),
+    [events],
+  );
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (empty) return;
       if (
         e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
       ) {
         return;
       }
@@ -77,20 +70,54 @@ export function TracePlaybackControls() {
         e.preventDefault();
         toggle();
       } else if (e.code === "ArrowRight") {
-        next();
+        e.preventDefault();
+        if (e.shiftKey) jump(Math.min(max, currentStep + 10));
+        else next();
       } else if (e.code === "ArrowLeft") {
-        prev();
+        e.preventDefault();
+        if (e.shiftKey) jump(Math.max(0, currentStep - 10));
+        else prev();
+      } else if (e.code === "Home") {
+        e.preventDefault();
+        jump(0);
+      } else if (e.code === "End") {
+        e.preventDefault();
+        jump(max);
+      } else if (e.key === "[" ) {
+        const idx = SPEEDS.findIndex((s) => s.value === speed);
+        if (idx > 0) setSpeed(SPEEDS[idx - 1]!.value);
+      } else if (e.key === "]") {
+        const idx = SPEEDS.findIndex((s) => s.value === speed);
+        if (idx >= 0 && idx < SPEEDS.length - 1) setSpeed(SPEEDS[idx + 1]!.value);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [toggle, next, prev, empty]);
+  }, [
+    toggle,
+    next,
+    prev,
+    empty,
+    jump,
+    max,
+    currentStep,
+    speed,
+    setSpeed,
+  ]);
 
   const btn =
     "rounded-lg p-2 text-text-muted transition hover:bg-white/5 hover:text-text-primary disabled:pointer-events-none disabled:opacity-30";
 
   return (
     <div className="glass flex flex-col gap-3 rounded-2xl px-4 py-3">
+      <MomentTimeline
+        moments={moments}
+        currentStep={currentStep}
+        total={total}
+        onJump={jump}
+        disabled={empty}
+      />
+
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-1.5">
           <button
@@ -175,44 +202,34 @@ export function TracePlaybackControls() {
               {s.label}
             </button>
           ))}
+          <button
+            type="button"
+            onClick={() => setShowKeys((v) => !v)}
+            className={btn}
+            aria-label="Keyboard shortcuts"
+            aria-pressed={showKeys}
+          >
+            <Keyboard className="h-4 w-4" />
+          </button>
         </div>
       </div>
 
-      <div className="relative pt-2">
-        {/* Event-type chapter ticks — compare / swap / call stand out */}
-        {!empty && markers.length > 0 && (
-          <div
-            className="pointer-events-none absolute inset-x-0 top-0 h-2"
-            aria-hidden
-          >
-            {markers.map((m) => (
-              <span
-                key={`${m.type}-${m.i}`}
-                className="absolute top-0 h-2 w-px opacity-80"
-                style={{
-                  left: `${max === 0 ? 0 : (m.i / max) * 100}%`,
-                  backgroundColor: m.color,
-                }}
-                title={m.type}
-              />
-            ))}
-          </div>
-        )}
-        <input
-          type="range"
-          min={0}
-          max={max}
-          value={Math.min(currentStep, max)}
-          onChange={(e) => jump(Number(e.target.value))}
-          disabled={empty}
-          className="relative z-[1] w-full accent-accent"
-          aria-label="Timeline"
-        />
-      </div>
-      <p className="text-[10px] text-text-muted">
-        Timeline ticks: compare · swap · assign · call · return · highlight ·
-        Shortcuts: Space · ← →
-      </p>
+      <input
+        type="range"
+        min={0}
+        max={max}
+        value={Math.min(currentStep, max)}
+        onChange={(e) => jump(Number(e.target.value))}
+        disabled={empty}
+        className="w-full accent-accent"
+        aria-label="Scrub timeline"
+      />
+
+      {showKeys && (
+        <p className="text-[10px] leading-relaxed text-text-muted">
+          Space play/pause · ← → step · Shift+←/→ ±10 · Home/End · [ ] speed
+        </p>
+      )}
     </div>
   );
 }

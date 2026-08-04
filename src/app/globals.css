@@ -120,6 +120,31 @@ body::before {
   .animate-pulse-glow {
     animation: none;
   }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+  }
+}
+
+/* High-contrast Trace Player tokens */
+@media (prefers-contrast: more) {
+  :root {
+    --text-primary: #ffffff;
+    --text-muted: #c5d0e0;
+    --border-glass: rgba(255, 255, 255, 0.35);
+    --bg-panel: rgba(0, 0, 0, 0.92);
+    --accent: #5dffc0;
+    --accent-2: #7adfff;
+    --accent-warm: #ffd666;
+  }
+
+  .glass {
+    border-width: 2px;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
 }
 
 html.lenis,

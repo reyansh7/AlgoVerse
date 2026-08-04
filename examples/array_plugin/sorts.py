@@ -12,7 +12,7 @@ from __future__ import annotations
 from algoverse import visualize
 
 
-@visualize(write=False)
+@visualize(write=False, open_player=False)
 def bubble_sort(arr):
     n = len(arr)
     for i in range(n - 1):
@@ -22,7 +22,7 @@ def bubble_sort(arr):
     return arr
 
 
-@visualize(write=False)
+@visualize(write=False, open_player=False)
 def selection_sort(arr):
     n = len(arr)
     for i in range(n):
@@ -35,7 +35,7 @@ def selection_sort(arr):
     return arr
 
 
-@visualize(write=False)
+@visualize(write=False, open_player=False)
 def insertion_sort(arr):
     for i in range(1, len(arr)):
         key = arr[i]
@@ -47,7 +47,7 @@ def insertion_sort(arr):
     return arr
 
 
-@visualize(write=False)
+@visualize(write=False, open_player=False)
 def quick_sort(arr):
     def partition(lo, hi):
         pivot = arr[hi]
@@ -70,7 +70,7 @@ def quick_sort(arr):
     return arr
 
 
-@visualize(write=False)
+@visualize(write=False, open_player=False)
 def heap_sort(arr):
     n = len(arr)
 
@@ -95,7 +95,7 @@ def heap_sort(arr):
     return arr
 
 
-@visualize(write=False)
+@visualize(write=False, open_player=False)
 def merge_sort(arr):
     def sort_range(lo, hi):
         if hi - lo <= 1:

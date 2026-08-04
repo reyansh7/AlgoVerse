@@ -19,7 +19,7 @@ class TraceStructure:
     """
 
     _algoverse_structure = True
-    __slots__ = ("_trace", "_name", "_line", "_sync_assign")
+    __slots__ = ("_trace", "_name", "_line", "_sync_assign", "_assign_after_swap")
 
     def __init__(
         self,
@@ -27,6 +27,7 @@ class TraceStructure:
         *,
         name: str,
         sync_assign: bool = True,
+        assign_after_swap: bool = True,
         line: Optional[int] = None,
     ) -> None:
         if not isinstance(trace, Trace):
@@ -36,6 +37,7 @@ class TraceStructure:
         self._trace = trace
         self._name = name
         self._sync_assign = bool(sync_assign)
+        self._assign_after_swap = bool(assign_after_swap)
         self._line = line
 
     @property
@@ -53,12 +55,18 @@ class TraceStructure:
 
     @line.setter
     def line(self, value: Optional[int]) -> None:
+        """Stamp source line; subclasses may reset per-line read windows."""
         self._line = value
 
     @property
     def sync_assign(self) -> bool:
         """If True, emit assign(name, snapshot) after structural mutations."""
         return self._sync_assign
+
+    @property
+    def assign_after_swap(self) -> bool:
+        """If False, skip bookkeeping assign after a swap (swap already mutates)."""
+        return self._assign_after_swap
 
     def flush(self) -> None:
         """Commit any pending multi-step detection. Override in subclasses."""
